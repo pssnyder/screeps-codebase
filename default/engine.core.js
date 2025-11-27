@@ -13,6 +13,7 @@ const DecisionTree = require('./decision.tree');
 const RoleManager = require('./role.manager');
 const SpawnController = require('./spawn.controller');
 const TowerController = require('./tower.controller');
+const StructurePlanner = require('./structure.planner');
 
 class EngineCore {
     /**
@@ -34,6 +35,9 @@ class EngineCore {
             
             // Evaluate room position
             const roomEval = Evaluator.evaluateRoom(room);
+            
+            // Auto-plan structures (v1.1)
+            StructurePlanner.run(room);
             
             // Make spawn decisions
             SpawnController.run(room, roomEval, strategy);

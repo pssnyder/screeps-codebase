@@ -1,5 +1,6 @@
 # Screeps World Codebase
-Author: Pat Snyder
+Author: Pat Snyder  
+**Version: 1.1.0** - Basic Survival Automation
 
 # Project Overview
 
@@ -13,14 +14,29 @@ This project aims to revolutionize Screeps gameplay by leveraging advanced data 
 - **Intelligent Decision Making**: Implementing search algorithms inspired by chess engines to evaluate and select optimal moves from multiple possible actions
 - **Machine Learning Integration**: Applying ML techniques to enhance creep behavior and strategic planning
 - **Advanced Analytics**: Leveraging data science background to analyze game patterns and optimize performance
+- **Autonomous Infrastructure**: AI automatically plans and builds optimal room layouts (v1.1+)
 - **Screeps Engine**: Building a comprehensive AI framework that makes creeps not just responsive, but truly intelligent
+
+## ✨ What's New in v1.1
+
+**🏗️ Fully Automated Infrastructure:**
+- Auto-placement of extensions, containers, towers, storage
+- Intelligent road planning between key structures
+- RCL-based progression (adapts as you level up)
+- No manual placement required - truly autonomous!
+
+**🚨 Emergency Systems:**
+- Prevents colony death from harvester shortage
+- Priority spawning when critical resources low
+
+**See [CHANGELOG.md](CHANGELOG.md) for full details**
 
 ## Technical Setup
 
 - **Language**: JavaScript (ES6+)
-- **Deployment**: Direct sync to Screeps game via GitHub integration
-- **Source Directory**: `screeps-codebase/src` (automatically synced to game)
-- **Authentication**: Game CLI auth token stored in `env.local`
+- **Deployment**: Direct sync to Screeps game via local folder
+- **Source Directory**: `default/` (auto-loaded by Screeps client)
+- **Version**: 1.1.0
 
 This codebase represents an ambitious attempt to create something unprecedented in the Screeps community - a truly intelligent, adaptive AI system that can compete at the highest levels of gameplay.
 

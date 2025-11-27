@@ -51,7 +51,7 @@ class DecisionTree {
         
         // Economic development priority
         const avgRoomLevel = Object.values(gameState.rooms).reduce(
-            (sum, room) => sum + (room.control?.level || 0), 0
+            (sum, room) => sum + (room.control && room.control.level ? room.control.level : 0), 0
         ) / Object.keys(gameState.rooms).length;
         
         if (avgRoomLevel < 4) {
@@ -105,8 +105,26 @@ class DecisionTree {
                 harvester: Math.max(0, sourceCount * 2 - (creepCounts.harvester || 0)),
                 upgrader: Math.max(0, 3 - (creepCounts.upgrader || 0)),
                 builder: Math.max(0, 2 - (creepCounts.builder || 0)),
-                hauler: Math.max(0, sourceCount - (creepCounts.hauler || 0))
+                hauler: Math.max(0, 1 - (creepCounts.hauler || 0))
             };
+            
+            // EMERGENCY: If we have less than 1 harvester, CRITICAL PRIORITY
+            if ((creepCounts.harvester || 0) < 1) {
+                needs.harvester = 2; // Emergency spawn
+            }
+            
+            // Reduce builder need if no construction sites
+            if (room) {
+                const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+                if (sites.length === 0 && (creepCounts.builder || 0) >= 1) {
+                    needs.builder = 0; // Don't need builders if nothing to build
+                }
+            }
+            
+            // Debug logging
+            if (Game.time % 50 === 0) {
+                console.log(`[Strategy] ${roomName} needs: H:${needs.harvester} U:${needs.upgrader} B:${needs.builder}`);
+            }
             
             // Defense needs
             if (roomEval.military && roomEval.military.threats && roomEval.military.threats.length > 0) {
@@ -161,6 +179,13 @@ class DecisionTree {
         
         // Boost priority if critical shortage
         let priority = priorities[role] || 1;
+        
+        // EMERGENCY: No harvesters = critical
+        if (role === 'harvester' && needs[role] >= 2) {
+            priority = 100; // Emergency priority
+        }
+        
+        // Boost other roles if shortage
         if (needs[role] >= 3) priority += 2;
         
         return priority;

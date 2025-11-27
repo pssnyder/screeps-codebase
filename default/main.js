@@ -9,16 +9,32 @@
 const Engine = require('./engine.core');
 const MemoryManager = require('./memory.manager');
 const Analytics = require('./analytics');
+const SpawnHelper = require('./spawn.helper');
+const ConsoleHelper = require('./console.helper');
+
+// Expose helpers to global scope for console commands
+global.SpawnHelper = SpawnHelper;
+global.Analytics = Analytics;
+global.Engine = Engine;
 
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '1.0.0',
+        version: '1.1.0',
         initialized: Game.time,
         stats: {},
         decisions: [],
         learning: {}
     };
+    
+    // Welcome message
+    console.log('═══════════════════════════════════════════');
+    console.log('🧠 SCREEPS ENGINE v1.1.0 - INITIALIZED');
+    console.log('═══════════════════════════════════════════');
+    console.log('Chess-engine inspired AI system');
+    console.log('NEW: Auto-structure planning & placement');
+    console.log('Type help() for available commands');
+    console.log('═══════════════════════════════════════════');
 }
 
 module.exports.loop = function() {

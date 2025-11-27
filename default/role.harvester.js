@@ -6,6 +6,17 @@
 
 class RoleHarvester {
     static run(creep, strategy) {
+        // Initialize stats if missing
+        if (!creep.memory.stats) {
+            creep.memory.stats = {
+                energyHarvested: 0,
+                energyDelivered: 0,
+                upgraded: 0,
+                built: 0,
+                repaired: 0
+            };
+        }
+        
         // State machine: harvesting -> delivering
         if (creep.store.getFreeCapacity() === 0) {
             creep.memory.working = true;
@@ -81,8 +92,12 @@ class RoleHarvester {
         
         if (creep.memory.targetId) {
             target = Game.getObjectById(creep.memory.targetId);
-            if (target && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+            // Validate target exists and has capacity
+            if (target && target.store && target.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
                 target = null;
+                creep.memory.targetId = null;
+            } else if (!target) {
+                // Target destroyed or invalid
                 creep.memory.targetId = null;
             }
         }
@@ -94,6 +109,7 @@ class RoleHarvester {
                     return (s.structureType === STRUCTURE_SPAWN ||
                             s.structureType === STRUCTURE_EXTENSION ||
                             s.structureType === STRUCTURE_TOWER) &&
+                           s.store &&
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
             });
@@ -104,7 +120,10 @@ class RoleHarvester {
             
             if (!target) {
                 // If no spawn/extension needs energy, deposit in storage
-                target = creep.room.storage;
+                const storage = creep.room.storage;
+                if (storage && storage.store && storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+                    target = storage;
+                }
             }
             
             if (!target) {
@@ -133,6 +152,10 @@ class RoleHarvester {
             });
         } else if (result === OK) {
             creep.memory.stats.energyDelivered += creep.store[RESOURCE_ENERGY];
+            creep.memory.targetId = null; // Clear target after successful delivery
+        } else if (result === ERR_INVALID_TARGET || result === ERR_FULL) {
+            // Target is invalid or full, clear it
+            creep.memory.targetId = null;
         }
     }
 }

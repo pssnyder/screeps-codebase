@@ -6,6 +6,17 @@
 
 class RoleUpgrader {
     static run(creep, strategy) {
+        // Initialize stats if missing
+        if (!creep.memory.stats) {
+            creep.memory.stats = {
+                energyHarvested: 0,
+                energyDelivered: 0,
+                upgraded: 0,
+                built: 0,
+                repaired: 0
+            };
+        }
+        
         // State machine
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.working = false;
