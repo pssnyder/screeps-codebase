@@ -9,9 +9,11 @@ class RoleHarvester {
         // State machine: harvesting -> delivering
         if (creep.store.getFreeCapacity() === 0) {
             creep.memory.working = true;
+            creep.say('🚚 deliver');
         }
         if (creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.working = false;
+            creep.say('⛏️ harvest');
         }
         
         if (!creep.memory.working) {
@@ -87,7 +89,7 @@ class RoleHarvester {
         
         if (!target) {
             // Priority order: spawns, extensions, towers, storage
-            target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+            const targets = creep.room.find(FIND_MY_STRUCTURES, {
                 filter: s => {
                     return (s.structureType === STRUCTURE_SPAWN ||
                             s.structureType === STRUCTURE_EXTENSION ||
@@ -95,6 +97,10 @@ class RoleHarvester {
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
             });
+            
+            if (targets.length > 0) {
+                target = creep.pos.findClosestByPath(targets);
+            }
             
             if (!target) {
                 // If no spawn/extension needs energy, deposit in storage

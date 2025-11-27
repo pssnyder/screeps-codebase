@@ -389,7 +389,379 @@ See **DEVELOPMENT.md** for:
 
 ---
 
-## 🎯 Part 13: First Session Goals
+## 🖥️ Part 13: LOCAL PRIVATE SERVER (Optional - Advanced Users)
+
+> ⚠️ **IMPORTANT**: This section is **OPTIONAL** and for advanced testing only!  
+> **You do NOT need a private server to play Screeps or use your engine.**  
+> Start with the official servers first (Parts 1-2), and come back here later if you want unlimited local testing.
+
+### TL;DR: Should You Set This Up Now?
+
+**NO! Skip this for now if:**
+- ✅ You're just starting with Screeps
+- ✅ You want to play on official servers first
+- ✅ You don't want to deal with Python 2 installation hassles
+
+**YES! Come back to this when:**
+- 🧪 You want to test code changes rapidly without waiting
+- 🚀 You need unlimited CPU for performance testing
+- 🤖 You want to spawn NPCs to practice against
+- 📊 You're doing ML experiments that need lots of data
+
+**The official Screeps servers work perfectly for your engine!** This private server is just a bonus for advanced experimentation.
+
+---
+
+### Why Use a Private Server?
+
+**UNLIMITED EVERYTHING!** No CPU limits, no online tick costs, perfect for:
+- ✅ **Testing your engine** without affecting your online colony
+- ✅ **Rapid iteration** - change code and see results instantly
+- ✅ **Scenario testing** - spawn enemies, set up situations
+- ✅ **Performance testing** - push your code to the limits
+- ✅ **Learning** - experiment freely without consequences
+- ✅ **Offline development** - no internet required
+
+### Quick Setup (5-15 Minutes)
+
+> 💡 **Easiest Method**: Use **WSL (Windows Subsystem for Linux)** or **Docker** to avoid Python 2 dependency issues on Windows!
+
+#### Prerequisites:
+
+**Choose One Method:**
+
+##### Method A: WSL (Recommended for Windows)
+- **WSL2** with Ubuntu: https://learn.microsoft.com/en-us/windows/wsl/install
+- Avoids Python 2 / build tool issues entirely
+- Clean, isolated environment
+
+```bash
+# In Windows PowerShell (as Admin)
+wsl --install -d Ubuntu
+
+# After restart, in Ubuntu WSL:
+cd /mnt/s/Programming/"Gaming Projects"/"Screeps World"
+mkdir screeps-private-server
+cd screeps-private-server
+
+# Install Node.js in WSL
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install build tools
+sudo apt-get install -y build-essential python3
+
+# Install Screeps
+npm install screeps
+npx screeps init
+npx screeps start
+```
+
+##### Method B: Native Windows (Requires Python 2)
+- **Node.js** 10+ ✅ (you already have this!)
+- **Python 2.7.18**: https://www.python.org/downloads/release/python-2718/
+  - ⚠️ Python 3 is NOT supported by old node-gyp
+  - Add to PATH during installation
+- **Visual Studio Build Tools**: https://visualstudio.microsoft.com/downloads/
+  - Need C++ build tools
+
+```bash
+# After installing Python 2.7 and Build Tools:
+cd "S:/Programming/Gaming Projects/Screeps World"
+mkdir screeps-private-server
+cd screeps-private-server
+
+# Tell npm which Python to use
+set PYTHON=C:\Python27\python.exe
+
+# Install the server
+npm install screeps
+
+# Initialize server
+npx screeps init
+```
+
+##### Method C: Docker (Easiest - No Dependencies!)
+```bash
+# Pull and run Screeps server in container
+docker pull screepers/screeps-server
+docker run -d -p 21025:21025 screepers/screeps-server
+```
+
+**You'll be prompted for a Steam Web API key:**
+1. Go to: https://steamcommunity.com/dev/apikey
+2. Register for a key (free, instant)
+3. Paste it when prompted
+
+#### Launch the Server:
+
+```bash
+# Start the server
+npx screeps start
+```
+
+**Server will launch on:**
+- Game server: `http://localhost:21025`
+- CLI server: `localhost:21026`
+
+### Connecting to Your Private Server
+
+#### Via Steam Client:
+1. Open Screeps in Steam
+2. Click **"Change Server"** (bottom left)
+3. Enter:
+   - **Host**: `localhost`
+   - **Port**: `21025`
+   - **Password**: (leave empty unless you set one)
+4. Click **Connect**
+
+Now you're playing on your local server! Everything else works the same.
+
+#### Via CLI (Admin Commands):
+
+Open a new terminal:
+```bash
+cd "S:/Programming/Gaming Projects/Screeps World/screeps-private-server"
+npx screeps cli
+```
+
+**Useful CLI commands:**
+```javascript
+// View help
+help()
+
+// Create a room with lots of resources
+map.generateRoom("W1N1", {sources: 4, terrainType: 2})
+
+// Spawn an NPC bot to test against
+bots.spawn('simplebot', 'W2N1')
+
+// Give yourself resources (for testing)
+storage.db['users'].update({username: "YourUsername"}, 
+  {$set: {money: 1000000}})
+
+// Check your user data
+storage.db['users'].findOne({username: "YourUsername"})
+
+// View all creeps in a room
+storage.db['rooms.objects'].find({
+  $and: [{room: 'W1N1'}, {type: 'creep'}]
+})
+
+// Send server message
+system.sendServerMessage("Testing my engine!")
+```
+
+### Deploy Your Code to Private Server
+
+Your engine works EXACTLY THE SAME on private servers:
+
+#### Method 1: Manual Upload (Easy)
+1. In Steam client connected to private server
+2. Go to **Scripts** tab
+3. Copy/paste code from `src/` files
+4. Or use the built-in editor
+
+#### Method 2: Automatic Sync (Pro)
+Use the `screeps` npm package with your code:
+
+```bash
+# In your code directory
+npm install screeps
+
+# Create .screepsrc file
+echo "{
+  \"email\": \"your@email.com\",
+  \"password\": \"your_password\",
+  \"branch\": \"default\",
+  \"ptr\": false,
+  \"serverPassword\": \"\",
+  \"serverUrl\": \"http://localhost:21025\"
+}" > .screepsrc
+
+# Upload code
+npx screeps upload
+```
+
+### Testing Scenarios on Private Server
+
+#### Scenario 1: Resource Scarcity
+```javascript
+// Via CLI - drain energy
+storage.db['rooms.objects'].update(
+  {room: 'W1N1', type: 'source'},
+  {$set: {energy: 100}}
+)
+
+// Watch how engine handles low energy
+```
+
+#### Scenario 2: Spawn Enemies
+```javascript
+// Create hostile creep
+bots.spawn('simplebot', 'W1N1', {
+  name: 'TestEnemy',
+  x: 25,
+  y: 25
+})
+
+// Watch your defenders respond!
+```
+
+#### Scenario 3: Instant Upgrade
+```javascript
+// Jump to RCL 8 instantly
+storage.db['rooms.objects'].update(
+  {room: 'W1N1', type: 'controller'},
+  {$set: {level: 8}}
+)
+
+// Test late-game features
+```
+
+#### Scenario 4: Infinite Energy
+```javascript
+// Give room massive energy storage
+storage.db['rooms.objects'].update(
+  {room: 'W1N1', type: 'storage'},
+  {$set: {store: {energy: 1000000}}}
+)
+
+// Watch expansion decisions
+```
+
+### Server Configuration Options
+
+Edit `.screepsrc` in your server directory:
+
+```json
+{
+  "db": "./db.json",           // Database file location
+  "logdir": "./logs",          // Log directory
+  "port": 21025,               // Game server port
+  "host": "0.0.0.0",           // Listen on all IPs
+  "password": "",              // Server password (optional)
+  "cli_port": 21026,           // CLI port
+  "cli_host": "127.0.0.1",     // CLI host
+  "runners_cnt": 2,            // Worker processes (match CPU cores)
+  "processors_cnt": 2          // Processor processes
+}
+```
+
+**Performance Tip:** Set `runners_cnt` and `processors_cnt` to your CPU core count for max speed!
+
+### Private Server vs Live World
+
+| Feature | Private Server | Live World |
+|---------|---------------|------------|
+| **CPU Limit** | ❌ None! | ✅ Limited by subscription |
+| **Tick Speed** | ⚡ Instant | 🐌 ~2-3 seconds |
+| **Cost** | 💰 Free | 💰 Subscription for high CPU |
+| **Persistence** | 💾 Local database | ☁️ Cloud saved |
+| **Other Players** | 🤖 Only NPCs | 👥 Real players |
+| **Testing** | ✅ Perfect | ⚠️ Risky |
+| **Learning** | ✅ Ideal | 📚 Slow feedback |
+| **Competition** | ❌ Offline | 🏆 Leaderboards |
+
+### Development Workflow (Best of Both Worlds)
+
+**Recommended approach:**
+
+1. **Develop on Private Server** (unlimited testing)
+   - Test new features
+   - Debug issues
+   - Optimize performance
+   - Run extreme scenarios
+
+2. **Deploy to Live World** (when stable)
+   - Git commit tested code
+   - GitHub syncs to live server
+   - Monitor with analytics
+   - Compete on leaderboards
+
+### Private Server Pro Tips
+
+1. **Reset Anytime**: Delete `db.json` to start fresh
+2. **Multiple Worlds**: Run servers on different ports
+3. **Snapshot Testing**: Copy `db.json` to save game states
+4. **Unlimited Rooms**: Generate as many as you want
+5. **God Mode**: Use CLI to modify anything
+6. **Speed Testing**: Measure ticks/second without lag
+7. **Mod Support**: Install custom game mods
+8. **NPC Testing**: Spawn bots to practice against
+
+### Troubleshooting Private Server
+
+**Python 3 syntax error (isolated-vm build fails):**
+```
+SyntaxError: Missing parentheses in call to 'print'
+```
+**Fix**: You have Python 3, but need Python 2.7
+- Option 1: Use WSL method above (recommended)
+- Option 2: Install Python 2.7 alongside Python 3
+- Option 3: Use Docker method
+
+**Server won't start:**
+```bash
+# Check if port is in use
+netstat -an | grep 21025
+
+# Try different port
+npx screeps start --port 21030
+```
+
+**Can't connect via Steam:**
+- Verify server is running
+- Check firewall isn't blocking port 21025
+- Try `localhost` or `127.0.0.1` as host
+
+**Python 2 not found:**
+- Windows: Install from python.org/downloads
+- Make sure it's in PATH
+
+**Build tools missing:**
+- Windows: Install Visual Studio Build Tools
+- Restart terminal after installation
+
+### Advanced: Custom Mods
+
+Create `mods.json` in server directory:
+```json
+[
+  "./my-custom-mod.js"
+]
+```
+
+Create `my-custom-mod.js`:
+```javascript
+module.exports = function(config) {
+  // Modify game behavior
+  if(config.engine) {
+    config.engine.on('playerSandbox', (sandbox) => {
+      // Add custom global functions
+      sandbox.myCustomFunction = () => {
+        return "Hello from mod!";
+      };
+    });
+  }
+};
+```
+
+### Summary: Why Private Server is Amazing
+
+🚀 **For Your Engine Specifically:**
+- Test chess evaluation without CPU constraints
+- Run analytics on large datasets
+- Benchmark decision tree performance
+- Spawn hundreds of creeps to test scaling
+- Simulate 1000s of ticks instantly
+- Perfect environment for ML experiments
+
+**You can go NUTS with this thing locally!** 🎉
+
+---
+
+## 🎯 Part 14: First Session Goals
 
 ### First 30 Minutes:
 1. ✅ Choose and place spawn in Novice Area
@@ -415,7 +787,7 @@ See **DEVELOPMENT.md** for:
 
 ---
 
-## 🆘 Part 14: Quick Reference Card
+## 🆘 Part 15: Quick Reference Card
 
 ### Essential Console Commands:
 ```javascript
@@ -496,7 +868,7 @@ console.log(JSON.stringify(state, null, 2));
 
 ---
 
-## 🏆 Part 15: You're Ready!
+## 🏆 Part 16: You're Ready!
 
 ### What Makes Your Engine Special:
 

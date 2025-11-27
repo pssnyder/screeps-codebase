@@ -10,9 +10,11 @@ class RoleBuilder {
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.working = false;
             creep.memory.targetId = null;
+            creep.say('🔄 harvest');
         }
         if (!creep.memory.working && creep.store.getFreeCapacity() === 0) {
             creep.memory.working = true;
+            creep.say('🚧 build');
         }
         
         if (creep.memory.working) {
@@ -61,12 +63,13 @@ class RoleBuilder {
         
         if (!target) {
             // No construction sites, repair damaged structures
+            creep.say('🔧 repair');
             const damaged = creep.room.find(FIND_STRUCTURES, {
                 filter: s => {
-                    // Don't repair walls/ramparts unless critically low
+                    // Don't repair walls/ramparts (too much HP, towers handle it)
                     if (s.structureType === STRUCTURE_WALL || 
                         s.structureType === STRUCTURE_RAMPART) {
-                        return s.hits < 5000;
+                        return false;
                     }
                     return s.hits < s.hitsMax * 0.75;
                 }
@@ -85,6 +88,7 @@ class RoleBuilder {
         
         if (!target) {
             // Nothing to build/repair, upgrade controller
+            creep.say('⚡ upgrade');
             target = creep.room.controller;
         }
         

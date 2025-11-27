@@ -28,6 +28,31 @@ module.exports.loop = function() {
     // Collect analytics data for each tick
     Analytics.recordTick();
     
+    // Visual feedback for spawning creeps (from tutorial)
+    for (const spawnName in Game.spawns) {
+        const spawn = Game.spawns[spawnName];
+        if (spawn.spawning) {
+            const spawningCreep = Game.creeps[spawn.spawning.name];
+            const role = spawningCreep ? spawningCreep.memory.role : 'unknown';
+            
+            // Emoji map for visual feedback
+            const roleEmojis = {
+                harvester: '⛏️',
+                upgrader: '⚡',
+                builder: '🔨',
+                hauler: '🚚',
+                defender: '⚔️'
+            };
+            
+            spawn.room.visual.text(
+                (roleEmojis[role] || '🛠️') + role,
+                spawn.pos.x + 1,
+                spawn.pos.y,
+                {align: 'left', opacity: 0.8}
+            );
+        }
+    }
+    
     // Main engine execution - evaluate position and make decisions
     try {
         Engine.run();
@@ -43,8 +68,22 @@ module.exports.loop = function() {
     
     // Display stats every 10 ticks
     if (Game.time % 10 === 0) {
+        const creepsByRole = {};
+        for (const name in Game.creeps) {
+            const role = Game.creeps[name].memory.role || 'unknown';
+            creepsByRole[role] = (creepsByRole[role] || 0) + 1;
+        }
+        
         console.log(`[Tick ${Game.time}] Creeps: ${Object.keys(Game.creeps).length} | ` +
                     `Rooms: ${Object.keys(Game.rooms).length} | ` +
                     `CPU: ${Game.cpu.getUsed().toFixed(2)}/${Game.cpu.limit}`);
+        
+        // Show creep composition
+        const composition = Object.keys(creepsByRole)
+            .map(role => `${role}: ${creepsByRole[role]}`)
+            .join(', ');
+        if (composition) {
+            console.log(`  └─ ${composition}`);
+        }
     }
 };

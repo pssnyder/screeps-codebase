@@ -1,2 +1,7 @@
 # Environment variables
 env.local
+node_modules
+
+# Screeps Game Files
+.sync
+tutorial-*/
