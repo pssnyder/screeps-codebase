@@ -5,11 +5,11 @@
  * Routes creeps to their role-specific AI modules
  */
 
-const RoleHarvester = require('role.harvester');
-const RoleUpgrader = require('role.upgrader');
-const RoleBuilder = require('role.builder');
-const RoleHauler = require('role.hauler');
-const RoleDefender = require('role.defender');
+const RoleHarvester = require('./role.harvester');
+const RoleUpgrader = require('./role.upgrader');
+const RoleBuilder = require('./role.builder');
+const RoleHauler = require('./role.hauler');
+const RoleDefender = require('./role.defender');
 
 class RoleManager {
     /**

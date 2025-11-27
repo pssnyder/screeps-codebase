@@ -8,11 +8,11 @@
  * - Best move selection
  */
 
-const Evaluator = require('evaluator');
-const DecisionTree = require('decision.tree');
-const RoleManager = require('role.manager');
-const SpawnController = require('spawn.controller');
-const TowerController = require('tower.controller');
+const Evaluator = require('./evaluator');
+const DecisionTree = require('./decision.tree');
+const RoleManager = require('./role.manager');
+const SpawnController = require('./spawn.controller');
+const TowerController = require('./tower.controller');
 
 class EngineCore {
     /**

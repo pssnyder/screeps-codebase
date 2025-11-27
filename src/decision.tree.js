@@ -67,7 +67,8 @@ class DecisionTree {
         });
         
         // Building priority if construction sites exist
-        const sites = Object.keys(Game.constructionSites).length;
+        const sites = (typeof Game !== 'undefined' && Game.constructionSites) ? 
+            Object.keys(Game.constructionSites).length : 0;
         if (sites > 0) {
             priorities.push({ type: 'BUILD', weight: 6 });
         }
@@ -92,22 +93,23 @@ class DecisionTree {
         
         for (const roomName in gameState.rooms) {
             const roomEval = gameState.rooms[roomName];
-            const room = Game.rooms[roomName];
+            const room = (typeof Game !== 'undefined' && Game.rooms) ? Game.rooms[roomName] : null;
             
             // Calculate optimal creep composition
-            const creepCounts = this.countCreepsByRole(room);
-            const sourceCount = roomEval.resources.sources.length;
+            const creepCounts = room ? this.countCreepsByRole(room) : {};
+            const sourceCount = roomEval.resources && roomEval.resources.sources ? 
+                roomEval.resources.sources.length : 2;
             
             // Determine what to spawn based on needs
             const needs = {
-                harvester: Math.max(0, sourceCount * 2 - creepCounts.harvester),
-                upgrader: Math.max(0, 3 - creepCounts.upgrader),
-                builder: Math.max(0, 2 - creepCounts.builder),
-                hauler: Math.max(0, sourceCount - creepCounts.hauler)
+                harvester: Math.max(0, sourceCount * 2 - (creepCounts.harvester || 0)),
+                upgrader: Math.max(0, 3 - (creepCounts.upgrader || 0)),
+                builder: Math.max(0, 2 - (creepCounts.builder || 0)),
+                hauler: Math.max(0, sourceCount - (creepCounts.hauler || 0))
             };
             
             // Defense needs
-            if (roomEval.military.threats.length > 0) {
+            if (roomEval.military && roomEval.military.threats && roomEval.military.threats.length > 0) {
                 needs.defender = Math.max(2, roomEval.military.threats.length * 2);
             }
             
@@ -118,7 +120,7 @@ class DecisionTree {
                         room: roomName,
                         role: role,
                         priority: this.getSpawnPriority(role, needs),
-                        body: this.generateOptimalBody(role, room)
+                        body: room ? this.generateOptimalBody(role, room) : [WORK, CARRY, MOVE]
                     });
                 }
             }

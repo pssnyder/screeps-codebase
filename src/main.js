@@ -6,9 +6,9 @@
  * Implements search-based decision making, position evaluation, and intelligent behavior
  */
 
-const Engine = require('engine.core');
-const MemoryManager = require('memory.manager');
-const Analytics = require('analytics');
+const Engine = require('./engine.core');
+const MemoryManager = require('./memory.manager');
+const Analytics = require('./analytics');
 
 // Initialize memory structure on first run
 if (!Memory.engine) {

@@ -4,7 +4,7 @@
  * Manages spawn queue and creep production
  */
 
-const MemoryManager = require('memory.manager');
+const MemoryManager = require('./memory.manager');
 
 class SpawnController {
     /**

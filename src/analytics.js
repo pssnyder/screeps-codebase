@@ -5,7 +5,7 @@
  * Collects metrics, identifies patterns, and enables adaptive behavior
  */
 
-const MemoryManager = require('memory.manager');
+const MemoryManager = require('./memory.manager');
 
 class Analytics {
     /**

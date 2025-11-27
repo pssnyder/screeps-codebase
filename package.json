@@ -1,0 +1,30 @@
+{
+  "name": "screeps-engine",
+  "version": "1.0.0",
+  "description": "Chess-engine inspired AI system for Screeps World",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "node test/test.suite.js",
+    "test:watch": "nodemon test/test.suite.js",
+    "lint": "echo 'No linter configured yet'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pssnyder/screeps-codebase.git"
+  },
+  "keywords": [
+    "screeps",
+    "ai",
+    "chess-engine",
+    "machine-learning",
+    "game-ai"
+  ],
+  "author": "Pat Snyder",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
