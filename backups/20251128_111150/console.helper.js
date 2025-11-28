@@ -381,8 +381,7 @@ class ConsoleHelper {
     }
     
     /**
-     * Force structure planning (useful for simulation/debugging)
-     * v2.0.1: Enhanced with detailed diagnostics
+     * Force structure planning (useful for simulation)
      */
     static planStructures() {
         const StructurePlanner = require('structure.planner');
@@ -392,49 +391,21 @@ class ConsoleHelper {
             const room = Game.rooms[roomName];
             if (!room.controller || !room.controller.my) continue;
             
-            const rcl = room.controller.level;
-            console.log(`\n📐 Planning for ${roomName} (RCL ${rcl})...`);
+            console.log(`\n📐 Planning for ${roomName} (RCL ${room.controller.level})...`);
             
-            // Check existing structures
-            const extensions = room.find(FIND_MY_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_EXTENSION
-            }).length;
-            const towers = room.find(FIND_MY_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_TOWER
-            }).length;
-            const storage = room.find(FIND_MY_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_STORAGE
-            }).length;
+            // Temporarily bypass throttling by directly calling planning methods
+            const spawns = room.find(FIND_MY_SPAWNS);
+            if (spawns.length === 0) {
+                console.log('  ❌ No spawn found');
+                continue;
+            }
             
-            // Check existing construction sites
-            const extSites = room.find(FIND_MY_CONSTRUCTION_SITES, {
-                filter: s => s.structureType === STRUCTURE_EXTENSION
-            }).length;
-            const towerSites = room.find(FIND_MY_CONSTRUCTION_SITES, {
-                filter: s => s.structureType === STRUCTURE_TOWER
-            }).length;
+            // Run planner
+            StructurePlanner.run(room);
             
-            console.log(`  Current: ${extensions} ext, ${towers} tower, ${storage} storage`);
-            console.log(`  Building: ${extSites} ext sites, ${towerSites} tower sites`);
-            
-            // Calculate what's needed
-            const maxExt = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl];
-            const maxTower = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl];
-            
-            console.log(`  Target: ${maxExt} ext (need ${maxExt - extensions - extSites}), ${maxTower} tower (need ${maxTower - towers - towerSites})`);
-            
-            // Run planner (bypasses throttling by calling directly)
-            const beforeSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
-            StructurePlanner.planExtensions(room);
-            StructurePlanner.planTower(room);
-            StructurePlanner.planContainers(room);
-            const afterSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
-            
-            console.log(`  Placed: ${afterSites - beforeSites} new sites`);
-            
-            // Show final state
+            // Show what was queued
             const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
-            console.log(`  ✅ Total construction sites: ${sites.length}`);
+            console.log(`  ✅ Construction sites: ${sites.length}`);
             
             const siteCounts = {};
             sites.forEach(s => {

@@ -32,6 +32,9 @@ class ConsoleHelper {
         console.log('  Analytics.analyze()  - Force analytics');
         console.log('');
         console.log('🔧 DEBUG:');
+        console.log('  debug()              - Simulation diagnostics');
+        console.log('  planStructures()     - Force structure planning');
+        console.log('  killAll(role)        - Kill all creeps of role');
         console.log('  Memory.engine        - View engine memory');
         console.log('  clear()              - Clear screen');
         console.log('═══════════════════════════════════════════');
@@ -290,6 +293,182 @@ class ConsoleHelper {
         creep.suicide();
         console.log(`💀 Killed ${creepName}`);
     }
+    
+    /**
+     * Debug simulation environment
+     * Use this to diagnose issues in simulation mode
+     */
+    static debug() {
+        console.log('═══════════════════════════════════════════');
+        console.log('🔍 SIMULATION DEBUG');
+        console.log('═══════════════════════════════════════════');
+        
+        for (const roomName in Game.rooms) {
+            const room = Game.rooms[roomName];
+            console.log(`\n🏰 Room: ${roomName}`);
+            
+            // Controller info
+            if (room.controller) {
+                console.log(`  Controller: RCL ${room.controller.level}, ${room.controller.my ? 'MY' : 'NOT MINE'}`);
+                console.log(`  Progress: ${room.controller.progress}/${room.controller.progressTotal}`);
+            } else {
+                console.log(`  ❌ No controller`);
+            }
+            
+            // Sources
+            const sources = room.find(FIND_SOURCES);
+            console.log(`  Sources: ${sources.length}`);
+            sources.forEach((s, i) => {
+                console.log(`    Source ${i}: ${s.energy}/${s.energyCapacity} at (${s.pos.x},${s.pos.y})`);
+            });
+            
+            // Structures
+            const spawns = room.find(FIND_MY_SPAWNS);
+            const extensions = room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_EXTENSION});
+            const towers = room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_TOWER});
+            const containers = room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_CONTAINER});
+            
+            console.log(`  Structures:`);
+            console.log(`    Spawns: ${spawns.length}`);
+            console.log(`    Extensions: ${extensions.length}`);
+            console.log(`    Towers: ${towers.length}`);
+            console.log(`    Containers: ${containers.length}`);
+            
+            // Construction sites
+            const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+            console.log(`  Construction: ${sites.length} sites`);
+            const siteCounts = {};
+            sites.forEach(s => {
+                siteCounts[s.structureType] = (siteCounts[s.structureType] || 0) + 1;
+            });
+            for (const type in siteCounts) {
+                console.log(`    ${type}: ${siteCounts[type]}`);
+            }
+            
+            // Hostiles
+            const hostiles = room.find(FIND_HOSTILE_CREEPS);
+            console.log(`  Hostiles: ${hostiles.length}`);
+            hostiles.forEach(h => {
+                const parts = h.body.map(p => p.type).join(',');
+                console.log(`    ${h.owner.username}: [${parts}] at (${h.pos.x},${h.pos.y})`);
+            });
+            
+            // Creeps by role
+            const creeps = room.find(FIND_MY_CREEPS);
+            const roleCounts = {};
+            creeps.forEach(c => {
+                const role = c.memory.role || 'unknown';
+                roleCounts[role] = (roleCounts[role] || 0) + 1;
+            });
+            console.log(`  Creeps: ${creeps.length} total`);
+            for (const role in roleCounts) {
+                console.log(`    ${role}: ${roleCounts[role]}`);
+            }
+            
+            // Energy
+            console.log(`  Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`);
+        }
+        
+        console.log('\n📊 Memory Engine State:');
+        if (Memory.engine) {
+            console.log(`  Version: ${Memory.engine.version || 'unknown'}`);
+            console.log(`  Decisions: ${Memory.engine.decisions ? Memory.engine.decisions.length : 0}`);
+        } else {
+            console.log(`  ❌ Memory.engine not initialized`);
+        }
+        
+        console.log('═══════════════════════════════════════════');
+    }
+    
+    /**
+     * Force structure planning (useful for simulation/debugging)
+     * v2.0.1: Enhanced with detailed diagnostics
+     */
+    static planStructures() {
+        const StructurePlanner = require('structure.planner');
+        
+        console.log('🏗️  Forcing structure planning...');
+        for (const roomName in Game.rooms) {
+            const room = Game.rooms[roomName];
+            if (!room.controller || !room.controller.my) continue;
+            
+            const rcl = room.controller.level;
+            console.log(`\n📐 Planning for ${roomName} (RCL ${rcl})...`);
+            
+            // Check existing structures
+            const extensions = room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_EXTENSION
+            }).length;
+            const towers = room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_TOWER
+            }).length;
+            const storage = room.find(FIND_MY_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_STORAGE
+            }).length;
+            
+            // Check existing construction sites
+            const extSites = room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_EXTENSION
+            }).length;
+            const towerSites = room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_TOWER
+            }).length;
+            
+            console.log(`  Current: ${extensions} ext, ${towers} tower, ${storage} storage`);
+            console.log(`  Building: ${extSites} ext sites, ${towerSites} tower sites`);
+            
+            // Calculate what's needed
+            const maxExt = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][rcl];
+            const maxTower = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][rcl];
+            
+            console.log(`  Target: ${maxExt} ext (need ${maxExt - extensions - extSites}), ${maxTower} tower (need ${maxTower - towers - towerSites})`);
+            
+            // Run planner (bypasses throttling by calling directly)
+            const beforeSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
+            StructurePlanner.planExtensions(room);
+            StructurePlanner.planTower(room);
+            StructurePlanner.planContainers(room);
+            const afterSites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
+            
+            console.log(`  Placed: ${afterSites - beforeSites} new sites`);
+            
+            // Show final state
+            const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+            console.log(`  ✅ Total construction sites: ${sites.length}`);
+            
+            const siteCounts = {};
+            sites.forEach(s => {
+                siteCounts[s.structureType] = (siteCounts[s.structureType] || 0) + 1;
+            });
+            for (const type in siteCounts) {
+                console.log(`    ${type}: ${siteCounts[type]}`);
+            }
+        }
+        
+        console.log('\n✅ Structure planning complete!');
+    }
+    
+    /**
+     * Kill all creeps of a specific role
+     */
+    static killAll(role) {
+        if (!role) {
+            console.log('❌ Usage: killAll("role")');
+            console.log('   Example: killAll("defender")');
+            return;
+        }
+        
+        let killed = 0;
+        for (const name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if (creep.memory.role === role) {
+                creep.suicide();
+                killed++;
+            }
+        }
+        
+        console.log(`💀 Killed ${killed} ${role}(s)`);
+    }
 }
 
 // Expose to global scope
@@ -298,6 +477,9 @@ global.status = () => ConsoleHelper.status();
 global.profile = () => ConsoleHelper.profile();
 global.strategy = () => ConsoleHelper.strategy();
 global.creeps = () => ConsoleHelper.creeps();
+global.debug = () => ConsoleHelper.debug();
+global.planStructures = () => ConsoleHelper.planStructures();
+global.killAll = (role) => ConsoleHelper.killAll(role);
 global.clear = () => ConsoleHelper.clear();
 global.kill = (name) => ConsoleHelper.kill(name);
 

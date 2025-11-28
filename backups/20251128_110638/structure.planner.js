@@ -2,46 +2,41 @@
  * STRUCTURE PLANNER
  * 
  * Automatically plans and places construction sites for optimal room layout
- * v2.0.1 - Priority-based planning (critical structures first)
+ * v1.1 - Basic survival automation
  */
 
 class StructurePlanner {
     /**
      * Plan and place construction sites for a room
-     * v2.0.1: Plan critical structures (extensions, towers) before roads
      */
     static run(room) {
         // Only plan once every 100 ticks
         if (Game.time % 100 !== 0) return;
         
-        const rcl = room.controller.level;
+        // Don't plan if we already have lots of construction sites
         const existingSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+        if (existingSites.length > 5) return;
         
-        // PRIORITY 1: Extensions (critical for energy capacity)
-        if (rcl >= 2 && existingSites.length < 10) {
+        const rcl = room.controller.level;
+        
+        // Plan based on RCL
+        if (rcl >= 2) {
             this.planExtensions(room);
         }
         
-        // PRIORITY 2: Towers (critical for defense at RCL 3+)
-        if (rcl >= 3 && existingSites.length < 10) {
-            this.planTower(room);
-        }
-        
-        // PRIORITY 3: Containers (important for economy)
-        if (rcl >= 2 && existingSites.length < 10) {
+        if (rcl >= 2) {
             this.planContainers(room);
         }
         
-        // PRIORITY 4: Storage (game-changer at RCL 4+)
-        if (rcl >= 4 && existingSites.length < 10) {
+        if (rcl >= 3) {
+            this.planTower(room);
+        }
+        
+        if (rcl >= 4) {
             this.planStorage(room);
         }
         
-        // PRIORITY 5: Roads (nice to have, but not critical)
-        // Only plan roads if we have < 5 sites total
-        if (existingSites.length < 5) {
-            this.planRoads(room);
-        }
+        this.planRoads(room);
     }
     
     /**

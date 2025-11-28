@@ -113,11 +113,16 @@ class DecisionTree {
                 needs.harvester = 2; // Emergency spawn
             }
             
-            // Reduce builder need if no construction sites
+            // Smart builder scaling - v2.0 enhancement
             if (room) {
                 const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+                const rcl = room.controller.level;
+                
                 if (sites.length === 0 && (creepCounts.builder || 0) >= 1) {
                     needs.builder = 0; // Don't need builders if nothing to build
+                } else if (sites.length > 5 && rcl >= 3) {
+                    // At RCL 3+, spawn extra builder if lots of construction
+                    needs.builder = Math.max(0, 3 - (creepCounts.builder || 0));
                 }
             }
             
@@ -126,9 +131,34 @@ class DecisionTree {
                 console.log(`[Strategy] ${roomName} needs: H:${needs.harvester} U:${needs.upgrader} B:${needs.builder}`);
             }
             
-            // Defense needs
+            // Defense needs - v2.0 smart defense (capped)
             if (roomEval.military && roomEval.military.threats && roomEval.military.threats.length > 0) {
-                needs.defender = Math.max(2, roomEval.military.threats.length * 2);
+                const currentDefenders = creepCounts.defender || 0;
+                const hostileCount = roomEval.military.threats.length;
+                const rcl = room ? room.controller.level : 1;
+                
+                // At RCL 3+, towers can handle defense - reduce defender need
+                const hasTowers = room && room.find(FIND_MY_STRUCTURES, {
+                    filter: s => s.structureType === STRUCTURE_TOWER
+                }).length > 0;
+                
+                let targetDefenders;
+                if (hasTowers) {
+                    // With towers, only spawn 1 defender for cleanup
+                    targetDefenders = Math.min(1, hostileCount);
+                } else {
+                    // Without towers, cap defenders at 3
+                    targetDefenders = Math.min(3, hostileCount + 1);
+                }
+                
+                needs.defender = Math.max(0, targetDefenders - currentDefenders);
+                
+                // CRITICAL: Don't spawn defenders if economy is failing
+                // If we have < 2 harvesters, defenders will starve anyway
+                if ((creepCounts.harvester || 0) < 2) {
+                    needs.defender = 0;
+                    console.log(`[Defense] Skipping defender spawn - economy too weak (${creepCounts.harvester || 0} harvesters)`);
+                }
             }
             
             // Convert needs to spawn queue

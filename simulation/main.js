@@ -20,7 +20,7 @@ global.Engine = Engine;
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '2.0.0',
+        version: '2.0.1',
         initialized: Game.time,
         stats: {},
         decisions: [],
@@ -29,7 +29,7 @@ if (!Memory.engine) {
     
     // Welcome message
     console.log('═══════════════════════════════════════════');
-    console.log('🧠 SCREEPS ENGINE v2.0.0 - INITIALIZED');
+    console.log('🧠 SCREEPS ENGINE v2.0.1 - INITIALIZED');
     console.log('═══════════════════════════════════════════');
     console.log('Chess-engine inspired AI system');
     console.log('OPTIMIZED: Tower CPU caching, throttled operations');
