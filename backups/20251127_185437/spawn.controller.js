@@ -56,43 +56,21 @@ class SpawnController {
     
     /**
      * Scale down body to fit available energy
-     * CRITICAL: Always ensure minimum viable body [WORK, CARRY, MOVE]
      */
     static scaleDownBody(body, energyAvailable) {
         const bodyCost = body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
         
         if (bodyCost <= energyAvailable) return body;
         
-        // Try minimum viable body first
-        const minBody = [WORK, CARRY, MOVE];
-        const minCost = minBody.reduce((sum, part) => sum + BODYPART_COST[part], 0);
-        
-        if (energyAvailable >= minCost) {
-            // If we can't afford anything better, use minimum
-            if (bodyCost > energyAvailable * 2) {
-                return minBody;
-            }
-            
-            // Scale down by removing complete pattern repetitions from end
-            const scaled = [...body];
-            while (scaled.length > minBody.length) {
-                const cost = scaled.reduce((sum, part) => sum + BODYPART_COST[part], 0);
-                if (cost <= energyAvailable) break;
-                
-                // Remove parts proportionally (remove one of each type in reverse)
-                scaled.pop();
-            }
-            
-            // Ensure we have at least WORK, CARRY, MOVE
-            if (scaled.length < minBody.length) return minBody;
-            if (!scaled.includes(CARRY)) return minBody;
-            if (!scaled.includes(MOVE)) return minBody;
-            
-            return scaled;
+        // Remove parts until it fits
+        const scaled = [...body];
+        while (scaled.length > 0) {
+            const cost = scaled.reduce((sum, part) => sum + BODYPART_COST[part], 0);
+            if (cost <= energyAvailable) break;
+            scaled.pop();
         }
         
-        // Not enough energy even for minimum body
-        return [];
+        return scaled;
     }
     
     /**

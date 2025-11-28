@@ -20,7 +20,7 @@ global.Engine = Engine;
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '1.1.2',
+        version: '1.1.0',
         initialized: Game.time,
         stats: {},
         decisions: [],
@@ -29,18 +29,15 @@ if (!Memory.engine) {
     
     // Welcome message
     console.log('═══════════════════════════════════════════');
-    console.log('🧠 SCREEPS ENGINE v1.1.2 - INITIALIZED');
+    console.log('🧠 SCREEPS ENGINE v1.1.0 - INITIALIZED');
     console.log('═══════════════════════════════════════════');
     console.log('Chess-engine inspired AI system');
-    console.log('OPTIMIZED: Tower CPU caching, throttled operations');
+    console.log('NEW: Auto-structure planning & placement');
     console.log('Type help() for available commands');
     console.log('═══════════════════════════════════════════');
 }
 
 module.exports.loop = function() {
-    // CPU profiling (only when over limit)
-    const cpuStart = Game.cpu.getUsed();
-    
     // Clean up dead creeps from memory
     MemoryManager.cleanDeadCreeps();
     
@@ -74,14 +71,7 @@ module.exports.loop = function() {
     
     // Main engine execution - evaluate position and make decisions
     try {
-        const engineStart = Game.cpu.getUsed();
         Engine.run();
-        const engineCost = Game.cpu.getUsed() - engineStart;
-        
-        // Warn if engine is consuming too much CPU
-        if (engineCost > 15 && Game.time % 10 === 0) {
-            console.log(`⚠️ High CPU: Engine used ${engineCost.toFixed(2)} CPU`);
-        }
     } catch (error) {
         console.log(`[ERROR] Engine execution failed: ${error.message}`);
         console.log(error.stack);
@@ -92,21 +82,17 @@ module.exports.loop = function() {
         Analytics.analyze();
     }
     
-    // Display stats every 100 ticks (reduced from 10 to prevent CPU spikes)
-    if (Game.time % 100 === 0) {
+    // Display stats every 10 ticks
+    if (Game.time % 10 === 0) {
         const creepsByRole = {};
         for (const name in Game.creeps) {
             const role = Game.creeps[name].memory.role || 'unknown';
             creepsByRole[role] = (creepsByRole[role] || 0) + 1;
         }
         
-        const totalCpu = Game.cpu.getUsed();
-        const cpuPercent = ((totalCpu / Game.cpu.limit) * 100).toFixed(0);
-        
         console.log(`[Tick ${Game.time}] Creeps: ${Object.keys(Game.creeps).length} | ` +
                     `Rooms: ${Object.keys(Game.rooms).length} | ` +
-                    `CPU: ${totalCpu.toFixed(2)}/${Game.cpu.limit} (${cpuPercent}%) | ` +
-                    `Bucket: ${Game.cpu.bucket}`);
+                    `CPU: ${Game.cpu.getUsed().toFixed(2)}/${Game.cpu.limit}`);
         
         // Show creep composition
         const composition = Object.keys(creepsByRole)

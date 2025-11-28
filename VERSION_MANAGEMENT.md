@@ -2,34 +2,65 @@
 
 ## 🎮 How Screeps Code Deployment Works
 
-### The Two Environments:
+### The Automatic Upload System:
 
 ```
 ┌─────────────────────────────────────────┐
-│  Local Screeps Folder (Your Machine)   │
+│  Local Screeps Folders (Your Machine)  │
 │  c:\Users\patss\AppData\Local\Screeps\ │
 │         scripts\screeps.com\            │
-│              └─ default/                │
-│                  ├─ main.js             │
-│                  ├─ role.harvester.js   │
-│                  └─ ...                 │
+│              ├─ default/      (production)
+│              ├─ simulation/   (testing)
+│              └─ dev/          (experiments)
 └─────────────────────────────────────────┘
                     ↓
-        Screeps Client Auto-Loads
+        Screeps Client Watches ALL Folders
+               (Background Process)
                     ↓
 ┌─────────────────────────────────────────┐
-│         Live Game Server                │
-│         (screeps.com)                   │
-│           shard3, W13N57                │
+│    Auto-Uploads to Screeps.com API     │
+│    ✓ default/     → "default" branch    │
+│    ✓ simulation/  → "simulation" branch │
+│    ✓ dev/         → "dev" branch        │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│      Screeps.com Server Storage         │
+│      (All branches stored)              │
+└─────────────────────────────────────────┘
+                    ↓
+        You Select Which Branch to Execute
+                    ↓
+┌─────────────────────────────────────────┐
+│         Live Game Execution             │
+│         (shard3, W13N57)                │
+│    Runs whichever branch you selected   │
 └─────────────────────────────────────────┘
 ```
 
 ### How It Works:
 
-**Your Screeps client (the desktop app) automatically watches the local folder:**
-- Any changes to files in `default/` folder
-- Are **immediately loaded** into the game
-- You see changes in real-time (no manual upload needed)
+**CRITICAL UNDERSTANDING:**
+
+1. **The Screeps app automatically watches ALL folders** when running:
+   - Any save to `default/` → Uploads to server as "default" branch
+   - Any save to `simulation/` → Uploads to server as "simulation" branch  
+   - Any save to `dev/` → Uploads to server as "dev" branch
+
+2. **Uploads happen in background**, regardless of:
+   - ❌ What view you have open (simulation, live world, map, etc.)
+   - ❌ Whether you're actively playing
+   - ❌ Which tab/window is visible
+
+3. **Only requirements for auto-upload:**
+   - ✅ Screeps desktop app is **running**
+   - ✅ You are **logged in** to your account
+   - ✅ You have **internet connection**
+
+4. **Branch selection controls EXECUTION, not upload:**
+   - All branches are always uploaded
+   - You select which one your live game runs
+   - Simulation rooms can run different branches
 
 ---
 
@@ -37,25 +68,28 @@
 
 ### Understanding Branches:
 
-Screeps has a **branch system** similar to Git, but it's built into the game:
+Screeps has a **branch system** built into the game. **Each local folder becomes a separate branch on the server.**
 
 ```
-Your Local Folder
-    ↓
-Screeps Client
-    ↓
-┌─────────────────────────────────┐
-│   Screeps Branches              │
-├─────────────────────────────────┤
-│  📁 default/  ← Main code       │
-│  📁 tutorial-1/                 │
-│  📁 tutorial-2/                 │
-│  📁 sim/     ← Simulation test  │
-│  📁 dev/     ← Development      │
-└─────────────────────────────────┘
+Your Local Folders (Always Uploading)
+    ├─ default/      → Server "default" branch
+    ├─ simulation/   → Server "simulation" branch  
+    └─ dev/          → Server "dev" branch
+                ↓
+        All Stored on Server
+                ↓
+        You Pick Which One Runs
 ```
 
-**Key Concept:** Each folder = one branch in Screeps
+**Key Concepts:**
+
+1. **Each folder = One branch on server**
+2. **ALL folders upload automatically** (when app is running)
+3. **Branch selection = Which code EXECUTES** (not which uploads)
+4. **Different views can run different branches:**
+   - Live world: Running "default" branch
+   - Simulation room: Running "simulation" branch
+   - Both active simultaneously!
 
 ---
 
@@ -67,125 +101,196 @@ Since you're **NOT using GitHub sync**, your workflow is:
 
 ```
 1. Edit code in VS Code
-   └─> Files in: c:\Users\patss\AppData\Local\Screeps\scripts\screeps.com\default\
+   └─> Files in: c:\Users\patss\AppData\Local\Screeps\scripts\screeps.com\
 
-2. Screeps client detects changes
-   └─> Auto-loads to LIVE game (shard3)
+2. Screeps client detects changes (background process)
+   └─> Auto-uploads to Screeps.com server
 
-3. Code runs immediately
-   └─> No manual upload needed
+3. Code executes based on branch selection
+   └─> Live world runs selected branch
 ```
 
-**⚠️ WARNING:** Changes go **LIVE instantly**. No staging environment!
+**⚠️ CRITICAL WARNING:**
+
+**Any save to `default/` folder = INSTANT PRODUCTION DEPLOY**
+
+This happens **even if**:
+- You're in simulation view (not looking at live world)
+- You're editing other files
+- You haven't "switched" to live world
+- The Screeps app is minimized
+
+**The Screeps app is ALWAYS uploading when running!**
 
 ---
 
 ## 🧪 Safe Testing Strategy
 
-### Option 1: Use Simulation Room (Recommended)
+### ⭐ RECOMMENDED: Simulation Branch Workflow (Your Production Setup)
 
-**For quick tests without affecting your live colony:**
+**This is the workflow you're using - safest for production environments:**
+
+```
+┌────────────────────────────────────────────┐
+│  1. Edit simulation/ files in VS Code     │
+│     - Auto-uploads to "simulation" branch  │
+│     - Does NOT affect production           │
+└────────────────────────────────────────────┘
+                    ↓
+┌────────────────────────────────────────────┐
+│  2. Test in Simulation View               │
+│     - Open simulation room in Screeps app  │
+│     - Switch to "simulation" branch        │
+│     - Changes apply in real-time           │
+│     - Iterate and test thoroughly          │
+└────────────────────────────────────────────┘
+                    ↓
+┌────────────────────────────────────────────┐
+│  3. Deploy when ready                      │
+│     ./deploy.sh deploy                     │
+│     - Copies simulation/ → default/        │
+│     - Auto-uploads to production           │
+│     - Live world gets new code             │
+└────────────────────────────────────────────┘
+                    ↓
+┌────────────────────────────────────────────┐
+│  4. Continue in simulation view            │
+│     - No need to switch views              │
+│     - Production updated automatically     │
+│     - Start working on next feature        │
+└────────────────────────────────────────────┘
+```
+
+**Why This Works:**
+
+✅ **Screeps app uploads BOTH folders simultaneously:**
+- `simulation/` changes → "simulation" branch
+- `default/` changes → "default" branch  
+- Both happen in background automatically
+
+✅ **You stay in simulation view the entire time:**
+- No need to switch to live world
+- No manual "deploy" button in game
+- No risk of forgetting which view you're in
+
+✅ **Deploy script handles the file copy:**
+- Creates automatic backup
+- Copies tested code to production
+- App detects changes and uploads
+- Live world updates on next tick
+
+✅ **Seamless workflow:**
+- Edit → Test → Deploy → Continue
+- Never leave simulation view
+- Production updates automatically
+- Complete isolation until you deploy
+
+**Commands:**
+
+```bash
+# Review changes before deploying
+./deploy.sh diff
+
+# Deploy to production (auto-backup)
+./deploy.sh deploy
+
+# Sync production → simulation (for new work)
+./deploy.sh sync
+
+# List backups (emergency rollback)
+./deploy.sh backups
+
+# Restore backup (if deploy went wrong)
+./deploy.sh restore 20251127_183022
+```
+
+### Alternative: Use Simulation Room (Quick Tests)
+
+**For rapid iteration on small changes:**
 
 1. In Screeps client: Click **"Simulation"** (left sidebar)
 2. Click **"Create New"**
-3. Your code from `default/` loads into simulation
-4. Test changes in isolated environment
-5. If good → already live in your real colony!
-6. If bad → Stop simulation, fix code, test again
+3. Edit code (any branch)
+4. Simulation picks up changes in real-time
+5. Test scenarios, spawn enemies, etc.
 
 **Pros:**
-- ✅ Safe testing environment
-- ✅ Can spawn enemies, test scenarios
-- ✅ Unlimited CPU
-- ✅ Can reset anytime
+- ✅ Unlimited CPU, instant reset
+- ✅ Can test dangerous scenarios
+- ✅ Isolated environment
 
 **Cons:**
-- ⚠️ Code is still live in real game simultaneously
-- ⚠️ Not a true "staging" environment
-
-### Option 2: Use Separate Branch/Folder
-
-**For major changes you want to test first:**
-
-**Step 1: Create a dev branch folder**
-```bash
-# In terminal
-cd "c:\Users\patss\AppData\Local\Screeps\scripts\screeps.com"
-mkdir dev
-cp -r default/* dev/
-```
-
-**Step 2: Switch branch in Screeps client**
-1. In Screeps game, open **Console** (right side)
-2. Click the **branch selector** (top right of console)
-3. Select **"dev"** branch
-4. Now your live game runs `dev/` code
-
-**Step 3: Edit and test**
-- Edit files in `dev/` folder
-- Changes apply to your live game
-- `default/` folder is untouched
-
-**Step 4: When ready, copy back**
-```bash
-# Copy tested code back to default
-cp -r dev/* default/
-```
-
-**Step 5: Switch back to default branch**
-- In Screeps console: Switch branch back to **"default"**
+- ⚠️ Simulation rooms reset when closed
+- ⚠️ Limited to single room testing
+- ⚠️ Must recreate state each time
 
 ---
 
-## 🎯 Recommended Workflows
+## 🎯 Your Production Workflows
 
-### For Small Changes (Tweaks, Bug Fixes):
+### ⭐ PRIMARY: Simulation Branch Testing (All Changes)
 
-```
-1. Edit code in default/
-2. Watch live game for 5-10 minutes
-3. If working: Done! ✅
-4. If broken: Fix immediately, auto-reloads
-```
-
-**Use when:**
-- Small tweaks to existing functions
-- Bug fixes
-- Parameter adjustments
-
-### For Major Changes (New Features, Refactors):
+**Use this for ALL production changes:**
 
 ```
-1. Copy default/ to dev/
-2. Switch Screeps to "dev" branch
-3. Edit code in dev/
-4. Test in live game (on dev branch)
-5. When stable:
-   - Copy dev/ → default/
-   - Switch back to "default" branch
-6. Monitor for issues
+1. Edit simulation/ files in VS Code
+   - Screeps app auto-uploads to "simulation" branch
+   - Does NOT touch production (default/ branch)
+   
+2. Stay in simulation view
+   - Changes appear in real-time
+   - Test thoroughly (10+ minutes)
+   - Iterate until stable
+   
+3. Deploy when ready
+   ./deploy.sh deploy
+   - Auto-creates backup
+   - Copies simulation/ → default/
+   - Production updates automatically
+   
+4. Continue working
+   - Stay in simulation view
+   - No view switching needed
+   - Start next feature immediately
 ```
 
-**Use when:**
-- Adding new roles
-- Refactoring core systems
-- Major algorithm changes
-- v1.2, v1.3 updates
+**Use for:**
+- ✅ Bug fixes
+- ✅ New features  
+- ✅ Refactoring
+- ✅ ALL production changes
 
-### For Risky Experiments:
+**Benefits:**
+- ✅ Zero risk to production until you deploy
+- ✅ Full testing environment
+- ✅ Seamless workflow
+- ✅ Automatic backups
+- ✅ Easy rollback if needed
+
+### Alternative: Emergency Hotfix (Rare)
+
+**ONLY for critical bugs that need immediate fix:**
 
 ```
-1. Use Simulation Room
-2. Place test code in default/
-3. Test in simulation
-4. If good: Already live!
-5. If bad: Fix before real colony affected
+1. Edit default/ file directly
+   - Production updates instantly
+   - HIGH RISK - no testing!
+   
+2. Watch live game console
+   - Monitor for errors
+   - Be ready to rollback
+   
+3. Sync back to simulation
+   ./deploy.sh sync
+   - Keeps branches in sync
 ```
 
-**Use when:**
-- Testing military strategies
-- Experimenting with spawning logic
-- Learning new Screeps APIs
+**Use for:**
+- ⚠️ Game-breaking bugs in production
+- ⚠️ Colony about to die
+- ⚠️ Critical syntax errors
+
+**Avoid when possible!** Use simulation branch instead.
 
 ---
 
@@ -221,84 +326,128 @@ git push origin main  # Push to your GitHub repo
 
 ## 🔧 Quick Reference Commands
 
-### VS Code → Screeps:
-```
-1. Save file in VS Code (Ctrl+S)
-2. Screeps client detects change automatically
-3. Code reloads in game (~2-3 seconds)
-4. Watch console for errors
-```
+### Your Daily Workflow:
 
-### Check Current Branch:
-```javascript
-// In Screeps console
-Memory.branch  // Shows current branch (may be undefined)
-
-// Or check top-right of console window
-// Shows: "Branch: default" or "Branch: dev"
-```
-
-### Quick Test in Simulation:
-```
-1. Simulation → Create New
-2. Code from default/ loads
-3. Test scenarios
-4. Stop → Fix → Repeat
-```
-
-### Switch Branches:
-```
-1. Console → Branch dropdown (top right)
-2. Select branch
-3. Confirm reload
-4. Code from that folder now runs
-```
-
-### Copy Between Branches:
 ```bash
-# Terminal
-cp -r default/* dev/          # Copy to dev
-cp -r dev/* default/          # Copy back
+# 1. Edit simulation/ files in VS Code
+code simulation/role.harvester.js
+# Save (Ctrl+S) → Auto-uploads to server
+
+# 2. Test in simulation view
+# (No commands needed - just watch game)
+
+# 3. Deploy when ready
+./deploy.sh deploy
+
+# 4. Emergency rollback (if needed)
+./deploy.sh backups
+./deploy.sh restore 20251127_183022
+```
+
+### Deploy Script Commands:
+
+```bash
+# Show differences between simulation and production
+./deploy.sh diff
+
+# Deploy simulation → production (with backup)
+./deploy.sh deploy
+
+# Sync production → simulation (for new work)
+./deploy.sh sync
+
+# List all backups
+./deploy.sh backups
+
+# Restore from backup
+./deploy.sh restore <backup_name>
+
+# Show help
+./deploy.sh help
+```
+
+### Check Current Branch (In Game):
+
+```javascript
+// In Screeps console, check top-right corner
+// Shows: "Branch: default ▼" or "Branch: simulation ▼"
+
+// Or use console commands
+status()    // Enhanced status with branch info
+help()      // Show available commands
+```
+
+### Manual Branch Operations (Rare):
+
+```bash
+# Only if you need to manually manage branches
+cp -r simulation/* default/     # Manual deploy
+cp -r default/* simulation/     # Manual sync
 ```
 
 ---
 
 ## 🚨 Common Mistakes & Solutions
 
-### Mistake 1: "My changes aren't showing!"
-**Cause:** Edited wrong branch folder  
+### Mistake 1: "I accidentally edited default/ instead of simulation/!"
+**Cause:** Wrong folder, production updated instantly  
 **Solution:**
 ```bash
-# Check which branch Screeps is using
-# In console, look at top-right branch indicator
-# Make sure you're editing the right folder!
+# Emergency rollback
+./deploy.sh backups          # Find latest backup
+./deploy.sh restore <name>   # Restore it
+
+# Or Git undo (if you have Git)
+git checkout HEAD -- default/
 ```
 
-### Mistake 2: "Game crashed after my change!"
-**Cause:** Syntax error in live code  
-**Solution:**
-```javascript
-// Errors show in console immediately
-// Fix the file in VS Code
-// Save → Auto-reloads
-```
-
-### Mistake 3: "Can't find my old code!"
-**Cause:** No Git commits  
+### Mistake 2: "My simulation changes aren't in production!"
+**Cause:** Forgot to deploy  
 **Solution:**
 ```bash
-# Start using Git NOW
-git init
-git add .
-git commit -m "Backup before changes"
+# Deploy simulation → production
+./deploy.sh deploy
 ```
 
-### Mistake 4: "Broke my colony!"
-**Cause:** Untested major change  
+### Mistake 3: "Production broke after deploy!"
+**Cause:** Didn't test enough in simulation  
 **Solution:**
-1. Revert file in VS Code (Ctrl+Z)
-2. Save to reload old code
-3. Or restore from Git: `git checkout main -- default/`
+```bash
+# Restore previous backup (created automatically)
+./deploy.sh backups
+./deploy.sh restore <previous_backup_name>
+
+# Fix in simulation, test more, redeploy
+```
+
+### Mistake 4: "Simulation and production are out of sync!"
+**Cause:** Manual edits to default/, or other confusion  
+**Solution:**
+```bash
+# Sync production → simulation
+./deploy.sh sync
+
+# Now simulation matches production
+# Continue normal workflow
+```
+
+### Mistake 5: "App isn't uploading my changes!"
+**Cause:** Screeps app not running or not logged in  
+**Solution:**
+1. Check Screeps app is open
+2. Check you're logged in (top-right corner)
+3. Check internet connection
+4. Look for sync indicator (bottom-right)
+
+### Mistake 6: "Changes showing in wrong place!"
+**Cause:** Editing one branch, but viewing another  
+**Solution:**
+```
+Check branch selector in console (top-right)
+Make sure:
+  - Simulation view = "simulation" branch selected
+  - Live world = "default" branch selected
+```
 
 ---
 
@@ -344,85 +493,151 @@ Major change → Dev branch + simulation + monitor 24 hours
 
 ## 🎓 Mental Model
 
-Think of it like this:
+### The Complete Upload & Execution Flow:
 
 ```
-┌────────────────────────────────────────┐
-│  VS Code                               │
-│  (Your IDE - Edit Code)                │
-└────────────────────────────────────────┘
-              ↓ Save File
-┌────────────────────────────────────────┐
-│  Local Folder                          │
-│  (c:\...\screeps.com\default\)        │
-│  (Source of Truth)                     │
-└────────────────────────────────────────┘
-              ↓ Auto-Watch
-┌────────────────────────────────────────┐
-│  Screeps Client                        │
-│  (Game Window - Loads Code)            │
-└────────────────────────────────────────┘
-              ↓ Executes
-┌────────────────────────────────────────┐
-│  Live Game Server                      │
-│  (shard3 - Your Colony)                │
-└────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│  VS Code (Edit Code)                                │
+│  ├─ Edit simulation/role.harvester.js               │
+│  └─ Save (Ctrl+S)                                   │
+└─────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────┐
+│  Local Folders (Source of Truth)                    │
+│  ├─ simulation/   (testing code)                    │
+│  └─ default/      (production code)                 │
+└─────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────┐
+│  Screeps Client (ALWAYS Watching)                   │
+│  Background Process:                                 │
+│  ├─ Detects simulation/ change                      │
+│  ├─ Detects default/ change                         │
+│  └─ Uploads ALL changes to server                   │
+└─────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────┐
+│  Screeps.com Server (Stores All Branches)           │
+│  ├─ "simulation" branch (from simulation/ folder)   │
+│  └─ "default" branch (from default/ folder)         │
+└─────────────────────────────────────────────────────┘
+                    ↓
+        YOU Select Which Branch to Execute
+                    ↓
+┌─────────────────────────────────────────────────────┐
+│  Game Execution (Independent)                       │
+│  ├─ Live World → Runs "default" branch              │
+│  └─ Simulation → Runs "simulation" branch           │
+│  (Both can run simultaneously!)                      │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Key Points:**
-- 💾 **Source of Truth**: Files in local folder
-- 🔄 **Auto-Sync**: Screeps client watches folder
-- ⚡ **Instant Deploy**: Changes go live immediately
-- 🧪 **Testing**: Use simulation or dev branch
-- 📚 **History**: Use Git for version control
+### Key Understanding:
+
+**Upload (Automatic):**
+- Happens for ALL folders whenever files change
+- Requires: Screeps app running + logged in
+- Independent of what view you have open
+- Background process, always active
+
+**Execution (Manual Selection):**
+- You choose which branch each view runs
+- Live world: Select branch in console dropdown
+- Simulation: Can test any branch
+- Different views can run different branches
+
+**Your Workflow:**
+- Edit `simulation/` → Tests in simulation view
+- Deploy script copies `simulation/` → `default/`
+- Production automatically gets new code
+- You never leave simulation view!
 
 ---
 
 ## 🎯 TL;DR - Quick Start
 
-**Normal workflow:**
-1. Edit code in VS Code (default/ folder)
-2. Save (Ctrl+S)
-3. Watch Screeps console for changes
-4. Commit to Git when stable
+### Your Production Workflow:
 
-**Testing workflow:**
-1. For small changes: Just watch live game
-2. For big changes: Copy to dev/, switch branch, test
-3. For experiments: Use Simulation room
-
-**Version control:**
-- Git = Your backup and history
-- Screeps branches = Quick A/B testing
-- Always commit stable versions
-
-**Emergency rollback:**
+**Daily Development:**
 ```bash
-git checkout HEAD -- default/filename.js
+1. Edit simulation/ files in VS Code
+2. Test in simulation view (stay there!)
+3. Deploy when ready: ./deploy.sh deploy
+4. Production updates automatically
+5. Continue working in simulation
+```
+
+**Understanding Uploads:**
+- ✅ Screeps app ALWAYS uploads when running
+- ✅ ALL folders upload simultaneously  
+- ✅ Doesn't matter which view you have open
+- ✅ Only requirement: App running + logged in
+
+**Safety Rules:**
+- ⚠️ NEVER edit `default/` directly (goes live instantly!)
+- ✅ ALWAYS edit `simulation/` first
+- ✅ ALWAYS test before deploying
+- ✅ Use `./deploy.sh deploy` to push to production
+
+**Version Control:**
+- Git = Your backup and history (use it!)
+- `./deploy.sh` = Automatic backups before deploy
+- Screeps branches = Testing vs Production
+
+**Emergency Rollback:**
+```bash
+./deploy.sh backups               # List backups
+./deploy.sh restore <backup_name> # Restore previous version
 ```
 
 ---
 
 ## 📞 Summary
 
-**You Have:**
+### Your Setup:
+
+**What You Have:**
 - ✅ VS Code for editing
-- ✅ Screeps client for running/viewing
-- ✅ Local folder that auto-syncs
+- ✅ Screeps desktop app (always uploads when running)
+- ✅ `simulation/` folder (safe testing)
+- ✅ `default/` folder (production)
+- ✅ `deploy.sh` script (safe deployment with backups)
 - ✅ No GitHub integration (direct file watching)
 
-**You Should Do:**
-- ✅ Use Git for version history (manual commits)
-- ✅ Use dev/ branch for major changes
-- ✅ Use simulation for risky experiments
-- ✅ Monitor live game after each change
-- ✅ Keep CHANGELOG.md updated
+**How It Works:**
+1. **Screeps app watches ALL folders** (background, automatic)
+2. **Any file change uploads to server** (regardless of view)
+3. **You select which branch executes** (in game console)
+4. **Deploy script safely promotes** simulation → production
+
+**Your Workflow:**
+```
+Edit simulation/ → Test in sim view → Deploy → Continue
+                                       ↓
+                            (Production updates automatically)
+```
+
+**Safety Features:**
+- ✅ Automatic backups before each deploy
+- ✅ Complete isolation (simulation ≠ production)
+- ✅ Easy rollback if needed
+- ✅ No manual upload triggers required
+- ✅ Stay in simulation view entire time
+
+**Critical Understanding:**
+> The Screeps app is ALWAYS uploading when running.
+> Branch selection controls EXECUTION, not UPLOAD.
+> All branches are always on the server, ready to run.
 
 **Version Flow:**
 ```
-Edit in VS Code → Auto-loads in Screeps → Runs on shard3
-                                     ↓
-                            Commit to Git (backup)
+Edit simulation/ → Auto-uploads → Test
+                                   ↓
+                            Deploy when ready
+                                   ↓
+                  Copies to default/ → Auto-uploads → Production runs
+                                                            ↓
+                                                 Commit to Git (backup)
 ```
 
-Simple and effective! 🎉
+Safe, simple, and effective! 🎉

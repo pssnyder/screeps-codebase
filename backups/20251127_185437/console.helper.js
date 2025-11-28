@@ -46,16 +46,9 @@ class ConsoleHelper {
         
         // Count creeps by role
         const creepsByRole = {};
-        const creepsByRoom = {};
         for (const name in Game.creeps) {
-            const creep = Game.creeps[name];
-            const role = creep.memory.role || 'unknown';
-            const roomName = creep.memory.room || creep.room.name;
-            
+            const role = Game.creeps[name].memory.role || 'unknown';
             creepsByRole[role] = (creepsByRole[role] || 0) + 1;
-            
-            if (!creepsByRoom[roomName]) creepsByRoom[roomName] = {};
-            creepsByRoom[roomName][role] = (creepsByRoom[roomName][role] || 0) + 1;
         }
         
         console.log('');
@@ -73,34 +66,17 @@ class ConsoleHelper {
                 const progress = room.controller.progress;
                 const total = room.controller.progressTotal;
                 const pct = total > 0 ? (progress / total * 100).toFixed(1) : 0;
-                const sites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
                 
                 console.log(`  ${roomName}:`);
                 console.log(`    RCL: ${room.controller.level}`);
                 console.log(`    Progress: ${pct}%`);
                 console.log(`    Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`);
                 console.log(`    Sources: ${room.find(FIND_SOURCES).length}`);
-                console.log(`    Construction: ${sites} sites`);
-                
-                // Show creeps assigned to this room
-                if (creepsByRoom[roomName]) {
-                    const roomComp = Object.keys(creepsByRoom[roomName])
-                        .map(r => `${r}:${creepsByRoom[roomName][r]}`)
-                        .join(', ');
-                    console.log(`    Creeps: ${roomComp}`);
-                }
             }
         }
         
         console.log('');
         console.log(`⚡ CPU: ${Game.cpu.getUsed().toFixed(2)}/${Game.cpu.limit || 'unlimited'}`);
-        console.log(`🪣 Bucket: ${Game.cpu.bucket}/10000`);
-        
-        // CPU trend warning
-        if (Game.cpu.bucket < 5000) {
-            console.log(`⚠️  WARNING: Low bucket! Consider optimizing.`);
-        }
-        
         console.log('═══════════════════════════════════════════');
     }
     
@@ -152,8 +128,7 @@ class ConsoleHelper {
             const creep = Game.creeps[name];
             const role = creep.memory.role || 'unknown';
             const working = creep.memory.working ? '🔨' : '🔄';
-            const capacity = creep.store.getCapacity(RESOURCE_ENERGY);
-            const energy = capacity !== null ? `${creep.store.energy}/${capacity}` : 'spawning';
+            const energy = `${creep.store.energy}/${creep.store.getCapacity(RESOURCE_ENERGY)}`;
             const ttl = creep.ticksToLive;
             
             console.log(`${working} ${name}:`);

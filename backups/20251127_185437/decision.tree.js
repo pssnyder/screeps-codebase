@@ -122,7 +122,7 @@ class DecisionTree {
             }
             
             // Debug logging
-            if (Game.time % 100 === 0) {
+            if (Game.time % 50 === 0) {
                 console.log(`[Strategy] ${roomName} needs: H:${needs.harvester} U:${needs.upgrader} B:${needs.builder}`);
             }
             
@@ -151,20 +151,16 @@ class DecisionTree {
     }
     
     /**
-     * Count creeps by role assigned to a room
-     * Counts ALL creeps assigned to the room, not just those physically in it
+     * Count creeps by role in a room
      */
     static countCreepsByRole(room) {
         const counts = {};
+        const creeps = room.find(FIND_MY_CREEPS);
         
-        // Count ALL creeps assigned to this room
-        for (const name in Game.creeps) {
-            const creep = Game.creeps[name];
-            if (creep.memory.room === room.name || (!creep.memory.room && creep.room.name === room.name)) {
-                const role = creep.memory.role || 'unknown';
-                counts[role] = (counts[role] || 0) + 1;
-            }
-        }
+        creeps.forEach(creep => {
+            const role = creep.memory.role || 'unknown';
+            counts[role] = (counts[role] || 0) + 1;
+        });
         
         return counts;
     }
