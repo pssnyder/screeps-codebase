@@ -9,20 +9,20 @@ const MemoryManager = require('./memory.manager');
 
 class Analytics {
     /**
-     * Record metrics for current tick - v2.0 optimized
-     * Only record every 10 ticks (1 tick = ~3 seconds, so this is every 30 sec)
+     * Record metrics for current tick
      */
     static recordTick() {
-        // Only record stats every 10 ticks to save CPU
-        if (Game.time % 10 !== 0) return;
+        // Count creeps by role
+        const creepsByRole = {};
+        for (const name in Game.creeps) {
+            const creep = Game.creeps[name];
+            const role = creep.memory.role || 'unknown';
+            creepsByRole[role] = (creepsByRole[role] || 0) + 1;
+        }
         
-        // Count creeps by role (simplified)
-        const totalCreeps = Object.keys(Game.creeps).length;
-        
-        // Record total energy across all rooms (optimized loop)
+        // Record total energy across all rooms
         let totalEnergy = 0;
         let totalStorage = 0;
-        
         for (const roomName in Game.rooms) {
             const room = Game.rooms[roomName];
             if (room.controller && room.controller.my) {
@@ -33,14 +33,18 @@ class Analytics {
             }
         }
         
-        // Store only essential metrics (reduced from 8+ to 4)
+        // Store metrics
         MemoryManager.recordStat('economy', 'totalEnergy', totalEnergy);
         MemoryManager.recordStat('economy', 'totalStorage', totalStorage);
-        MemoryManager.recordStat('population', 'totalCreeps', totalCreeps);
-        MemoryManager.recordStat('performance', 'cpu', Game.cpu.getUsed());
+        MemoryManager.recordStat('population', 'totalCreeps', Object.keys(Game.creeps).length);
         
-        // Skip per-role tracking and bucket tracking to save CPU
-        // Can add back if needed, but these are rarely used
+        for (const role in creepsByRole) {
+            MemoryManager.recordStat('population', `role_${role}`, creepsByRole[role]);
+        }
+        
+        // CPU tracking
+        MemoryManager.recordStat('performance', 'cpu', Game.cpu.getUsed());
+        MemoryManager.recordStat('performance', 'bucket', Game.cpu.bucket);
     }
     
     /**

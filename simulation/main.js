@@ -20,7 +20,7 @@ global.Engine = Engine;
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '1.1.2',
+        version: '2.0.0',
         initialized: Game.time,
         stats: {},
         decisions: [],
@@ -29,7 +29,7 @@ if (!Memory.engine) {
     
     // Welcome message
     console.log('═══════════════════════════════════════════');
-    console.log('🧠 SCREEPS ENGINE v1.1.2 - INITIALIZED');
+    console.log('🧠 SCREEPS ENGINE v2.0.0 - INITIALIZED');
     console.log('═══════════════════════════════════════════');
     console.log('Chess-engine inspired AI system');
     console.log('OPTIMIZED: Tower CPU caching, throttled operations');
@@ -38,16 +38,22 @@ if (!Memory.engine) {
 }
 
 module.exports.loop = function() {
-    // CPU profiling (only when over limit)
+    // v2.0: CPU profiling - track time per module
     const cpuStart = Game.cpu.getUsed();
+    const profiling = {};
     
     // Clean up dead creeps from memory
+    let checkpoint = Game.cpu.getUsed();
     MemoryManager.cleanDeadCreeps();
+    profiling.memoryCleanup = Game.cpu.getUsed() - checkpoint;
     
     // Collect analytics data for each tick
+    checkpoint = Game.cpu.getUsed();
     Analytics.recordTick();
+    profiling.analytics = Game.cpu.getUsed() - checkpoint;
     
     // Visual feedback for spawning creeps (from tutorial)
+    checkpoint = Game.cpu.getUsed();
     for (const spawnName in Game.spawns) {
         const spawn = Game.spawns[spawnName];
         if (spawn.spawning) {
@@ -71,25 +77,34 @@ module.exports.loop = function() {
             );
         }
     }
+    profiling.visuals = Game.cpu.getUsed() - checkpoint;
     
     // Main engine execution - evaluate position and make decisions
     try {
-        const engineStart = Game.cpu.getUsed();
+        checkpoint = Game.cpu.getUsed();
         Engine.run();
-        const engineCost = Game.cpu.getUsed() - engineStart;
+        profiling.engine = Game.cpu.getUsed() - checkpoint;
         
         // Warn if engine is consuming too much CPU
-        if (engineCost > 15 && Game.time % 10 === 0) {
-            console.log(`⚠️ High CPU: Engine used ${engineCost.toFixed(2)} CPU`);
+        if (profiling.engine > 15 && Game.time % 10 === 0) {
+            console.log(`⚠️ High CPU: Engine used ${profiling.engine.toFixed(2)} CPU`);
         }
     } catch (error) {
         console.log(`[ERROR] Engine execution failed: ${error.message}`);
         console.log(error.stack);
     }
     
+    // Store profiling data for profile() command
+    profiling.total = Game.cpu.getUsed() - cpuStart;
+    profiling.tick = Game.time;
+    Memory.profiling = profiling;
+    
     // Periodic analytics and learning
     if (Game.time % 100 === 0) {
         Analytics.analyze();
+        
+        // Clean old stats periodically
+        MemoryManager.cleanOldStats();
     }
     
     // Display stats every 100 ticks (reduced from 10 to prevent CPU spikes)

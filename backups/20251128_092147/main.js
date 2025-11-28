@@ -102,9 +102,6 @@ module.exports.loop = function() {
     // Periodic analytics and learning
     if (Game.time % 100 === 0) {
         Analytics.analyze();
-        
-        // Clean old stats periodically
-        MemoryManager.cleanOldStats();
     }
     
     // Display stats every 100 ticks (reduced from 10 to prevent CPU spikes)

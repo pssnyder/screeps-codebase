@@ -6,14 +6,9 @@
 
 class MemoryManager {
     /**
-     * Clean up memory of dead creeps - v2.0 optimized
-     * Only run cleanup when needed (not every tick)
+     * Clean up memory of dead creeps
      */
     static cleanDeadCreeps() {
-        // Only clean every 10 ticks (dead creeps don't respawn instantly)
-        if (Game.time % 10 !== 0) return;
-        
-        // Fast cleanup: only iterate Memory.creeps once
         for (const name in Memory.creeps) {
             if (!Game.creeps[name]) {
                 delete Memory.creeps[name];
@@ -43,7 +38,7 @@ class MemoryManager {
     }
     
     /**
-     * Store analytics data - v2.0 optimized
+     * Store analytics data
      */
     static recordStat(category, key, value) {
         if (!Memory.engine.stats[category]) {
@@ -59,27 +54,9 @@ class MemoryManager {
             value: value
         });
         
-        // Keep only last 100 entries (reduced from 1000 for v2.0)
-        const maxEntries = 100;
-        if (Memory.engine.stats[category][key].length > maxEntries) {
+        // Keep only last 1000 entries per stat
+        if (Memory.engine.stats[category][key].length > 1000) {
             Memory.engine.stats[category][key].shift();
-        }
-    }
-    
-    /**
-     * Clean old stats - run periodically
-     */
-    static cleanOldStats() {
-        // Only run every 1000 ticks
-        if (Game.time % 1000 !== 0) return;
-        
-        const cutoffTick = Game.time - 10000; // Keep last 10k ticks
-        
-        for (const category in Memory.engine.stats) {
-            for (const key in Memory.engine.stats[category]) {
-                Memory.engine.stats[category][key] = 
-                    Memory.engine.stats[category][key].filter(s => s.tick > cutoffTick);
-            }
         }
     }
     

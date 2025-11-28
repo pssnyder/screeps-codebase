@@ -9,20 +9,20 @@ const MemoryManager = require('./memory.manager');
 
 class Analytics {
     /**
-     * Record metrics for current tick
+     * Record metrics for current tick - v2.0 optimized
+     * Only record every 10 ticks (1 tick = ~3 seconds, so this is every 30 sec)
      */
     static recordTick() {
-        // Count creeps by role
-        const creepsByRole = {};
-        for (const name in Game.creeps) {
-            const creep = Game.creeps[name];
-            const role = creep.memory.role || 'unknown';
-            creepsByRole[role] = (creepsByRole[role] || 0) + 1;
-        }
+        // Only record stats every 10 ticks to save CPU
+        if (Game.time % 10 !== 0) return;
         
-        // Record total energy across all rooms
+        // Count creeps by role (simplified)
+        const totalCreeps = Object.keys(Game.creeps).length;
+        
+        // Record total energy across all rooms (optimized loop)
         let totalEnergy = 0;
         let totalStorage = 0;
+        
         for (const roomName in Game.rooms) {
             const room = Game.rooms[roomName];
             if (room.controller && room.controller.my) {
@@ -33,18 +33,14 @@ class Analytics {
             }
         }
         
-        // Store metrics
+        // Store only essential metrics (reduced from 8+ to 4)
         MemoryManager.recordStat('economy', 'totalEnergy', totalEnergy);
         MemoryManager.recordStat('economy', 'totalStorage', totalStorage);
-        MemoryManager.recordStat('population', 'totalCreeps', Object.keys(Game.creeps).length);
-        
-        for (const role in creepsByRole) {
-            MemoryManager.recordStat('population', `role_${role}`, creepsByRole[role]);
-        }
-        
-        // CPU tracking
+        MemoryManager.recordStat('population', 'totalCreeps', totalCreeps);
         MemoryManager.recordStat('performance', 'cpu', Game.cpu.getUsed());
-        MemoryManager.recordStat('performance', 'bucket', Game.cpu.bucket);
+        
+        // Skip per-role tracking and bucket tracking to save CPU
+        // Can add back if needed, but these are rarely used
     }
     
     /**

@@ -15,7 +15,8 @@ class ConsoleHelper {
         console.log('');
         console.log('📊 STATUS & INFO:');
         console.log('  help()           - Show this help');
-        console.log('  status()         - Show colony status');
+        console.log('  status()         - Show colony status (v2.0 enhanced)');
+        console.log('  profile()        - CPU profiling by module');
         console.log('  creeps()         - List all creeps');
         console.log('  strategy()       - Show current strategy');
         console.log('');
@@ -37,69 +38,177 @@ class ConsoleHelper {
     }
     
     /**
-     * Show current colony status
+     * Show current colony status - v2.0 enhanced
      */
     static status() {
         console.log('═══════════════════════════════════════════');
-        console.log(`📊 COLONY STATUS - Tick ${Game.time}`);
+        console.log('🧠 SCREEPS ENGINE v2.0 - COLONY STATUS');
         console.log('═══════════════════════════════════════════');
         
-        // Count creeps by role
-        const creepsByRole = {};
-        const creepsByRoom = {};
-        for (const name in Game.creeps) {
-            const creep = Game.creeps[name];
-            const role = creep.memory.role || 'unknown';
-            const roomName = creep.memory.room || creep.room.name;
-            
-            creepsByRole[role] = (creepsByRole[role] || 0) + 1;
-            
-            if (!creepsByRoom[roomName]) creepsByRoom[roomName] = {};
-            creepsByRoom[roomName][role] = (creepsByRoom[roomName][role] || 0) + 1;
-        }
-        
-        console.log('');
-        console.log('👥 CREEPS:');
-        console.log(`  Total: ${Object.keys(Game.creeps).length}`);
-        for (const role in creepsByRole) {
-            console.log(`  ${role}: ${creepsByRole[role]}`);
-        }
-        
-        console.log('');
-        console.log('🏠 ROOMS:');
         for (const roomName in Game.rooms) {
             const room = Game.rooms[roomName];
-            if (room.controller && room.controller.my) {
-                const progress = room.controller.progress;
-                const total = room.controller.progressTotal;
-                const pct = total > 0 ? (progress / total * 100).toFixed(1) : 0;
-                const sites = room.find(FIND_MY_CONSTRUCTION_SITES).length;
+            if (!room.controller || !room.controller.my) continue;
+            
+            console.log(`\n🏰 Room: ${roomName} (RCL ${room.controller.level})`);
+            
+            // Energy Economy
+            const energyPercent = (room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0);
+            console.log(`  ⚡ Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${energyPercent}%)`);
+            
+            if (room.storage) {
+                const storageEnergy = room.storage.store[RESOURCE_ENERGY];
+                const storageTotal = room.storage.store.getUsedCapacity();
+                const storageCap = room.storage.store.getCapacity();
+                console.log(`  📦 Storage: ${storageEnergy.toLocaleString()} energy (${storageTotal.toLocaleString()}/${storageCap.toLocaleString()} total)`);
                 
-                console.log(`  ${roomName}:`);
-                console.log(`    RCL: ${room.controller.level}`);
-                console.log(`    Progress: ${pct}%`);
-                console.log(`    Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`);
-                console.log(`    Sources: ${room.find(FIND_SOURCES).length}`);
-                console.log(`    Construction: ${sites} sites`);
-                
-                // Show creeps assigned to this room
-                if (creepsByRoom[roomName]) {
-                    const roomComp = Object.keys(creepsByRoom[roomName])
-                        .map(r => `${r}:${creepsByRoom[roomName][r]}`)
-                        .join(', ');
-                    console.log(`    Creeps: ${roomComp}`);
+                // Show other resources
+                const otherResources = [];
+                for (const resource in room.storage.store) {
+                    if (resource !== RESOURCE_ENERGY && room.storage.store[resource] > 0) {
+                        otherResources.push(`${resource}: ${room.storage.store[resource]}`);
+                    }
                 }
+                if (otherResources.length > 0) {
+                    console.log(`     Resources: ${otherResources.join(', ')}`);
+                }
+            }
+            
+            // Minerals
+            const minerals = room.find(FIND_MINERALS);
+            if (minerals.length > 0) {
+                const m = minerals[0];
+                const available = m.mineralAmount > 0 ? m.mineralAmount.toLocaleString() : 'depleted';
+                const regen = m.mineralAmount === 0 ? ` (regen in ${m.ticksToRegeneration})` : '';
+                console.log(`  💎 Mineral: ${m.mineralType} - ${available}${regen}`);
+            }
+            
+            // Construction Progress
+            const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+            if (sites.length > 0) {
+                console.log(`  🏗️  Construction: ${sites.length} site(s) active`);
+                sites.forEach(s => {
+                    const percent = (s.progress / s.progressTotal * 100).toFixed(0);
+                    console.log(`     ${s.structureType}: ${percent}%`);
+                });
+            } else {
+                console.log(`  🏗️  Construction: None`);
+            }
+            
+            // Infrastructure
+            const towers = room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_TOWER });
+            const extensions = room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === STRUCTURE_EXTENSION });
+            const maxExt = CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][room.controller.level];
+            const maxTower = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][room.controller.level];
+            console.log(`  🏢 Infrastructure: ${extensions.length}/${maxExt} ext, ${towers.length}/${maxTower} tower`);
+            
+            // Creep Population
+            const creeps = room.find(FIND_MY_CREEPS);
+            const byRole = {};
+            creeps.forEach(c => {
+                byRole[c.memory.role] = (byRole[c.memory.role] || 0) + 1;
+            });
+            console.log(`  🤖 Creeps: ${creeps.length} total`);
+            for (const role in byRole) {
+                console.log(`     ${role}: ${byRole[role]}`);
+            }
+            
+            // Defense
+            const hostiles = room.find(FIND_HOSTILE_CREEPS);
+            if (hostiles.length > 0) {
+                console.log(`  ⚔️  THREAT: ${hostiles.length} hostile(s)!`);
+            } else {
+                console.log(`  🛡️  Defense: All clear`);
+            }
+            
+            // Controller
+            const ctrlPercent = (room.controller.progress / room.controller.progressTotal * 100).toFixed(2);
+            console.log(`  📈 Controller: ${ctrlPercent}% to RCL ${room.controller.level + 1}`);
+            const downgrade = room.controller.ticksToDowngrade.toLocaleString();
+            console.log(`     Downgrade: ${downgrade} ticks`);
+        }
+        
+        // Performance
+        console.log('\n⚙️  PERFORMANCE:');
+        const cpuUsed = Game.cpu.getUsed().toFixed(2);
+        const cpuPercent = (Game.cpu.getUsed() / Game.cpu.limit * 100).toFixed(0);
+        console.log(`  CPU: ${cpuUsed}/${Game.cpu.limit} (${cpuPercent}%)`);
+        console.log(`  Bucket: ${Game.cpu.bucket}/10000`);
+        const memoryKB = (RawMemory.get().length / 1024).toFixed(0);
+        console.log(`  Memory: ${memoryKB} KB`);
+        
+        // Alerts
+        console.log('\n⚠️  ALERTS:');
+        const alerts = [];
+        
+        for (const roomName in Game.rooms) {
+            const room = Game.rooms[roomName];
+            if (!room.controller || !room.controller.my) continue;
+            
+            if (room.energyAvailable < room.energyCapacityAvailable * 0.3) {
+                alerts.push(`${roomName}: Low energy (${(room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0)}%)`);
+            }
+            if (room.controller.ticksToDowngrade < 5000) {
+                alerts.push(`${roomName}: Downgrade risk (${room.controller.ticksToDowngrade} ticks)`);
+            }
+            const creeps = room.find(FIND_MY_CREEPS);
+            if (creeps.length < 4) {
+                alerts.push(`${roomName}: Low creep count (${creeps.length})`);
             }
         }
         
-        console.log('');
-        console.log(`⚡ CPU: ${Game.cpu.getUsed().toFixed(2)}/${Game.cpu.limit || 'unlimited'}`);
-        console.log(`🪣 Bucket: ${Game.cpu.bucket}/10000`);
-        
-        // CPU trend warning
-        if (Game.cpu.bucket < 5000) {
-            console.log(`⚠️  WARNING: Low bucket! Consider optimizing.`);
+        if (Game.cpu.bucket < 2000) {
+            alerts.push('CRITICAL: CPU bucket low!');
         }
+        if (Game.cpu.getUsed() > Game.cpu.limit * 0.9) {
+            alerts.push('WARNING: CPU usage > 90%');
+        }
+        
+        if (alerts.length === 0) {
+            console.log('  ✅ All systems nominal');
+        } else {
+            alerts.forEach(alert => console.log(`  🔴 ${alert}`));
+        }
+        
+        console.log('═══════════════════════════════════════════');
+    }
+    
+    /**
+     * CPU profiling by module - v2.0 new
+     */
+    static profile() {
+        console.log('═══════════════════════════════════════════');
+        console.log('⚡ CPU PROFILING - Last Tick');
+        console.log('═══════════════════════════════════════════');
+        
+        if (!Memory.profiling) {
+            console.log('\nProfiling not enabled.');
+            console.log('Enable in main.js to see module CPU breakdown.');
+            console.log('═══════════════════════════════════════════');
+            return;
+        }
+        
+        const profile = Memory.profiling;
+        const total = profile.total || Game.cpu.getUsed();
+        
+        console.log(`\nTotal: ${total.toFixed(2)} CPU\n`);
+        
+        const modules = [];
+        for (const key in profile) {
+            if (key !== 'total' && key !== 'tick') {
+                modules.push({
+                    name: key,
+                    cpu: profile[key],
+                    percent: (profile[key] / total * 100)
+                });
+            }
+        }
+        
+        modules.sort((a, b) => b.cpu - a.cpu);
+        
+        modules.forEach(m => {
+            const bar = '█'.repeat(Math.ceil(m.percent / 5));
+            console.log(`  ${m.name.padEnd(20)} ${m.cpu.toFixed(2).padStart(6)} CPU  ${m.percent.toFixed(1).padStart(5)}%  ${bar}`);
+        });
         
         console.log('═══════════════════════════════════════════');
     }
@@ -186,6 +295,7 @@ class ConsoleHelper {
 // Expose to global scope
 global.help = () => ConsoleHelper.help();
 global.status = () => ConsoleHelper.status();
+global.profile = () => ConsoleHelper.profile();
 global.strategy = () => ConsoleHelper.strategy();
 global.creeps = () => ConsoleHelper.creeps();
 global.clear = () => ConsoleHelper.clear();

@@ -47,7 +47,7 @@ class ConsoleHelper {
         
         for (const roomName in Game.rooms) {
             const room = Game.rooms[roomName];
-            if (!room.controller || !room.controller.my) continue;
+            if (!room.controller?.my) continue;
             
             console.log(`\n🏰 Room: ${roomName} (RCL ${room.controller.level})`);
             
@@ -142,7 +142,7 @@ class ConsoleHelper {
         
         for (const roomName in Game.rooms) {
             const room = Game.rooms[roomName];
-            if (!room.controller || !room.controller.my) continue;
+            if (!room.controller?.my) continue;
             
             if (room.energyAvailable < room.energyCapacityAvailable * 0.3) {
                 alerts.push(`${roomName}: Low energy (${(room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0)}%)`);
