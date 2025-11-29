@@ -20,7 +20,7 @@ global.Engine = Engine;
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '2.0.1',
+        version: '2.0.2',
         initialized: Game.time,
         stats: {},
         decisions: [],
@@ -102,6 +102,9 @@ module.exports.loop = function() {
     // Periodic analytics and learning
     if (Game.time % 100 === 0) {
         Analytics.analyze();
+        
+        // Record dashboard telemetry for Mission Control
+        Analytics.recordDashboardTelemetry();
         
         // Clean old stats periodically
         MemoryManager.cleanOldStats();

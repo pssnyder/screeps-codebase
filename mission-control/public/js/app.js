@@ -68,15 +68,103 @@ function updateTelemetry(data) {
     document.getElementById('ext-count').textContent = data.structures.extensions;
     document.getElementById('tower-count').textContent = data.structures.towers;
     
-    // Check for alerts
-    if (data.cpu / data.cpuLimit > 0.9) {
-        showAlert('HIGH CPU USAGE');
+    // Check for alerts and categorize them
+    checkAlerts(data);
+}
+
+// Alert categorization and management
+const alertCategories = {
+    CRITICAL: { priority: 1, color: '#ff4444', icon: '🚨' },
+    HIGH: { priority: 2, color: '#ff9944', icon: '⚠️' },
+    MEDIUM: { priority: 3, color: '#ffdd44', icon: '⚡' },
+    LOW: { priority: 4, color: '#44dd88', icon: 'ℹ️' }
+};
+
+let activeAlerts = new Map();
+
+function checkAlerts(data) {
+    // Clear old alerts
+    clearExpiredAlerts();
+    
+    // CRITICAL: CPU over limit
+    if (data.cpu > data.cpuLimit) {
+        addAlert('CPU_OVER_LIMIT', 'CRITICAL', `CPU EXCEEDED LIMIT: ${data.cpu}/${data.cpuLimit}`);
+    } else {
+        removeAlert('CPU_OVER_LIMIT');
     }
+    
+    // HIGH: CPU warning (>90%)
+    if (data.cpu / data.cpuLimit > 0.9 && data.cpu <= data.cpuLimit) {
+        addAlert('CPU_HIGH', 'HIGH', `High CPU Usage: ${Math.round((data.cpu / data.cpuLimit) * 100)}%`);
+    } else {
+        removeAlert('CPU_HIGH');
+    }
+    
+    // HIGH: Low bucket (<1000)
     if (data.bucket < 1000) {
-        showAlert('LOW BUCKET');
+        addAlert('BUCKET_LOW', 'HIGH', `Low Bucket: ${data.bucket}/10000`);
+    } else {
+        removeAlert('BUCKET_LOW');
     }
-    if (data.energy / data.energyCapacity < 0.2) {
-        showAlert('LOW ENERGY');
+    
+    // LOW: Low energy (<20%) - not critical, will self-correct
+    if (data.energy / data.energyCapacity < 0.2 && data.energy > 0) {
+        addAlert('ENERGY_LOW', 'LOW', `Low Energy: ${Math.round((data.energy / data.energyCapacity) * 100)}%`);
+    } else {
+        removeAlert('ENERGY_LOW');
+    }
+    
+    // Update alert display
+    renderAlerts();
+}
+
+function addAlert(id, category, message) {
+    activeAlerts.set(id, {
+        id,
+        category,
+        message,
+        timestamp: Date.now(),
+        ...alertCategories[category]
+    });
+}
+
+function removeAlert(id) {
+    activeAlerts.delete(id);
+}
+
+function clearExpiredAlerts() {
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    for (const [id, alert] of activeAlerts) {
+        if (now - alert.timestamp > fiveMinutes) {
+            activeAlerts.delete(id);
+        }
+    }
+}
+
+function renderAlerts() {
+    const alertBar = document.getElementById('alert-bar');
+    
+    if (activeAlerts.size === 0) {
+        alertBar.style.display = 'none';
+        return;
+    }
+    
+    // Sort by priority
+    const sorted = Array.from(activeAlerts.values()).sort((a, b) => a.priority - b.priority);
+    
+    // Show highest priority alert
+    const topAlert = sorted[0];
+    const alertMessage = document.getElementById('alert-message');
+    
+    alertMessage.innerHTML = `${topAlert.icon} <strong>${topAlert.category}:</strong> ${topAlert.message}`;
+    alertBar.style.display = 'flex';
+    alertBar.style.borderLeftColor = topAlert.color;
+    
+    // Show count if multiple alerts
+    if (activeAlerts.size > 1) {
+        alertMessage.innerHTML += ` <span style="opacity: 0.7">(+${activeAlerts.size - 1} more)</span>`;
     }
 }
 
@@ -131,18 +219,7 @@ function addConsoleMessage(type, message) {
     }
 }
 
-function showAlert(message) {
-    const alertBar = document.getElementById('alert-bar');
-    const alertMessage = document.getElementById('alert-message');
-    
-    alertMessage.textContent = message;
-    alertBar.style.display = 'flex';
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        alertBar.style.display = 'none';
-    }, 5000);
-}
+// Removed annoying popup showAlert function - now using persistent alert bar
 
 // Quick command shortcuts
 window.quickCommand = {

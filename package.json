@@ -1,6 +1,6 @@
 {
   "name": "screeps-engine",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Chess-engine inspired AI system for Screeps World",
   "main": "src/main.js",
   "scripts": {

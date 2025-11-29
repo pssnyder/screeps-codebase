@@ -103,9 +103,6 @@ module.exports.loop = function() {
     if (Game.time % 100 === 0) {
         Analytics.analyze();
         
-        // Record dashboard telemetry for Mission Control
-        Analytics.recordDashboardTelemetry();
-        
         // Clean old stats periodically
         MemoryManager.cleanOldStats();
     }
