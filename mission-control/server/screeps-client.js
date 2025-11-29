@@ -25,6 +25,14 @@ class ScreepsClient {
         this.connected = false;
         this.memory = null;
         this.lastUpdate = null;
+        
+        // Intelligent caching layer
+        this.cache = {
+            memory: { data: null, timestamp: 0, ttl: 60000 }, // 60 seconds
+            user: { data: null, timestamp: 0, ttl: 30000 },   // 30 seconds
+            rateLimited: false,
+            rateLimitUntil: 0
+        };
     }
     
     async connect() {
@@ -58,6 +66,60 @@ class ScreepsClient {
     }
     
     /**
+     * Check if currently rate limited
+     */
+    isRateLimited() {
+        if (this.cache.rateLimited && Date.now() < this.cache.rateLimitUntil) {
+            return true;
+        }
+        if (Date.now() >= this.cache.rateLimitUntil) {
+            this.cache.rateLimited = false;
+            if (this.cache.rateLimitUntil > 0) {
+                console.log('[Screeps Client] Rate limit expired. Resuming normal operations.');
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Mark as rate limited with exponential backoff
+     */
+    markRateLimited(retryAfterMs) {
+        const maxWait = 3600000; // Cap at 1 hour
+        const waitTime = Math.min(retryAfterMs, maxWait);
+        this.cache.rateLimitUntil = Date.now() + waitTime;
+        this.cache.rateLimited = true;
+        
+        const minutes = Math.floor(waitTime / 60000);
+        const seconds = Math.floor((waitTime % 60000) / 1000);
+        console.log(`[Screeps Client] Rate limited for ${minutes}m ${seconds}s. Using cached data.`);
+    }
+    
+    /**
+     * Get cached data if still valid
+     */
+    getCached(key) {
+        const cacheEntry = this.cache[key];
+        if (!cacheEntry) return null;
+        
+        const age = Date.now() - cacheEntry.timestamp;
+        if (age < cacheEntry.ttl && cacheEntry.data) {
+            return cacheEntry.data;
+        }
+        return null;
+    }
+    
+    /**
+     * Set cache data
+     */
+    setCache(key, data) {
+        if (this.cache[key]) {
+            this.cache[key].data = data;
+            this.cache[key].timestamp = Date.now();
+        }
+    }
+    
+    /**
      * Get real-time telemetry (CPU, bucket, energy)
      * Uses intelligent caching to minimize API calls
      */
@@ -69,7 +131,7 @@ class ScreepsClient {
             const cachedMemory = this.getCached('memory');
             const cachedUser = this.getCached('user');
             if (cachedMemory && cachedUser) {
-                return this.buildTelemetryFromCache(roomName, cachedMemory, cachedUser);
+                return this.buildTelemetryFromCache(roomName, shard, cachedMemory, cachedUser);
             }
             // No cache available, return safe defaults
             return this.getDefaultTelemetry(roomName, shard);
@@ -150,7 +212,7 @@ class ScreepsClient {
                     const cachedMemory = this.getCached('memory');
                     const cachedUser = this.getCached('user');
                     if (cachedMemory && cachedUser) {
-                        return this.buildTelemetryFromCache(roomName, cachedMemory, cachedUser);
+                        return this.buildTelemetryFromCache(roomName, shard, cachedMemory, cachedUser);
                     }
                 }
             } else {
@@ -164,7 +226,7 @@ class ScreepsClient {
     /**
      * Build telemetry from cached data
      */
-    buildTelemetryFromCache(roomName, memory, user) {
+    buildTelemetryFromCache(roomName, shard, memory, user) {
         const dashboardData = memory.dashboard && memory.dashboard[roomName];
         
         return {

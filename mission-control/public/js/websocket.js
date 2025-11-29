@@ -47,7 +47,7 @@ function initializeWebSocket() {
     
     socket.on('screeps:error', (data) => {
         addConsoleMessage('error', `API ERROR: ${data.message}`);
-        showAlert(data.message);
+        // Alert will be handled by checkAlerts() in app.js
     });
 }
 
