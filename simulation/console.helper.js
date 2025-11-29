@@ -45,7 +45,7 @@ class ConsoleHelper {
      */
     static status() {
         console.log('═══════════════════════════════════════════');
-        console.log('🧠 SCREEPS ENGINE v2.0 - COLONY STATUS');
+        console.log(`🧠 SCREEPS ENGINE v${Memory.engine.version} - COLONY STATUS`);
         console.log('═══════════════════════════════════════════');
         
         for (const roomName in Game.rooms) {

@@ -68,8 +68,26 @@ function updateTelemetry(data) {
     document.getElementById('ext-count').textContent = data.structures.extensions;
     document.getElementById('tower-count').textContent = data.structures.towers;
     
+    // Show cache status if data is cached
+    updateCacheStatus(data);
+    
     // Check for alerts and categorize them
     checkAlerts(data);
+}
+
+function updateCacheStatus(data) {
+    const cacheEl = document.getElementById('cache-status');
+    if (data.cached) {
+        const ageMinutes = Math.floor((data.cacheAge || 0) / 60000);
+        const ageSec = Math.floor(((data.cacheAge || 0) % 60000) / 1000);
+        cacheEl.textContent = `📦 CACHED (${ageMinutes}m ${ageSec}s old)`;
+        cacheEl.style.display = 'inline';
+    } else if (data.offline) {
+        cacheEl.textContent = '⚠️ OFFLINE MODE';
+        cacheEl.style.display = 'inline';
+    } else {
+        cacheEl.style.display = 'none';
+    }
 }
 
 // Alert categorization and management
@@ -228,3 +246,33 @@ window.quickCommand = {
     debug: () => window.WebSocket.sendCommand('debug()'),
     strategy: () => window.WebSocket.sendCommand('strategy()')
 };
+
+// Wiki modal controls
+document.addEventListener('DOMContentLoaded', () => {
+    const wikiToggle = document.getElementById('wiki-toggle');
+    const wikiModal = document.getElementById('wiki-modal');
+    const wikiClose = document.getElementById('wiki-close');
+    
+    wikiToggle.addEventListener('click', () => {
+        wikiModal.style.display = 'flex';
+        window.Wiki.init();
+    });
+    
+    wikiClose.addEventListener('click', () => {
+        wikiModal.style.display = 'none';
+    });
+    
+    // Close on background click
+    wikiModal.addEventListener('click', (e) => {
+        if (e.target === wikiModal) {
+            wikiModal.style.display = 'none';
+        }
+    });
+    
+    // Escape key closes modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && wikiModal.style.display === 'flex') {
+            wikiModal.style.display = 'none';
+        }
+    });
+});

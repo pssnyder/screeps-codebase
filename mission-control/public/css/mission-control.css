@@ -390,3 +390,325 @@ body {
         flex-direction: row;
     }
 }
+
+/* Wiki Toggle Button */
+.wiki-toggle {
+    position: fixed;
+    bottom: 80px;
+    right: 30px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0088cc 100%);
+    border: 2px solid #00d4ff;
+    color: #0a0e14;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+    z-index: 999;
+    font-family: 'Consolas', monospace;
+}
+
+.wiki-toggle:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+    background: linear-gradient(135deg, #00eeff 0%, #00aaee 100%);
+}
+
+/* Wiki Modal */
+.wiki-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.wiki-modal-content {
+    background: linear-gradient(135deg, #0a0e14 0%, #131824 100%);
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1200px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 50px rgba(0, 212, 255, 0.2);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.wiki-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+}
+
+.wiki-modal-header h2 {
+    color: #00d4ff;
+    margin: 0;
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.wiki-close {
+    background: rgba(255, 68, 68, 0.2);
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s;
+}
+
+.wiki-close:hover {
+    background: rgba(255, 68, 68, 0.3);
+    transform: scale(1.1);
+}
+
+.wiki-modal-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding: 20px;
+    gap: 20px;
+}
+
+.wiki-sidebar {
+    width: 250px;
+    background: rgba(19, 24, 36, 0.6);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.wiki-category {
+    padding: 12px 15px;
+    margin: 8px 0;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #8b92a0;
+    font-size: 14px;
+}
+
+.wiki-category:hover {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+    transform: translateX(5px);
+}
+
+.wiki-category.active {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: #00d4ff;
+    color: #00d4ff;
+    font-weight: bold;
+}
+
+.wiki-content {
+    flex: 1;
+    background: rgba(19, 24, 36, 0.6);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 8px;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.wiki-content h2 {
+    color: #00d4ff;
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.wiki-command {
+    background: rgba(0, 212, 255, 0.05);
+    border-left: 3px solid #00d4ff;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+}
+
+.wiki-command-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.wiki-command-name {
+    font-family: 'Consolas', monospace;
+    font-size: 18px;
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.wiki-command-execute {
+    background: rgba(0, 212, 255, 0.2);
+    border: 1px solid #00d4ff;
+    color: #00d4ff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.wiki-command-execute:hover {
+    background: rgba(0, 212, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.wiki-command-description {
+    color: #e0e6ed;
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
+.wiki-command-syntax {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    color: #ffc700;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.wiki-command-syntax code {
+    display: block;
+    white-space: pre-wrap;
+}
+
+.wiki-command-example {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.wiki-command-example-title {
+    color: #8b92a0;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.wiki-command-example-code {
+    font-family: 'Consolas', monospace;
+    color: #00ff88;
+    font-size: 13px;
+}
+
+.wiki-note {
+    background: rgba(255, 199, 0, 0.1);
+    border-left: 3px solid #ffc700;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+    color: #e0e6ed;
+}
+
+.wiki-note-title {
+    color: #ffc700;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* Gauge Descriptions */
+.gauge-description {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.gauge {
+    position: relative;
+}
+
+/* Tooltips */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(0, 212, 255, 0.95);
+    color: #0a0e14;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: normal;
+    width: 200px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+
+[data-tooltip]::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    border: 6px solid transparent;
+    border-top-color: rgba(0, 212, 255, 0.95);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Status item tooltips - adjust for grid layout */
+.status-item[data-tooltip]::before {
+    width: 180px;
+    bottom: calc(100% + 10px);
+}

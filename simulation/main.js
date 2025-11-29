@@ -29,7 +29,7 @@ if (!Memory.engine) {
     
     // Welcome message
     console.log('═══════════════════════════════════════════');
-    console.log('🧠 SCREEPS ENGINE v2.0.1 - INITIALIZED');
+    console.log(`🧠 SCREEPS ENGINE v${Memory.engine.version} - INITIALIZED`);
     console.log('═══════════════════════════════════════════');
     console.log('Chess-engine inspired AI system');
     console.log('OPTIMIZED: Tower CPU caching, throttled operations');

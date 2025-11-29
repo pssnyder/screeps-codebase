@@ -59,16 +59,36 @@ class ScreepsClient {
     
     /**
      * Get real-time telemetry (CPU, bucket, energy)
+     * Uses intelligent caching to minimize API calls
      */
     async getTelemetry(roomName, shard) {
         if (!this.connected) throw new Error('Not connected to Screeps API');
         
+        // If rate limited, return cached data
+        if (this.isRateLimited()) {
+            const cachedMemory = this.getCached('memory');
+            const cachedUser = this.getCached('user');
+            if (cachedMemory && cachedUser) {
+                return this.buildTelemetryFromCache(roomName, cachedMemory, cachedUser);
+            }
+            // No cache available, return safe defaults
+            return this.getDefaultTelemetry(roomName, shard);
+        }
+        
         try {
-            // Get user info for CPU/bucket
-            const user = await this.api.me();
+            // Try to get user info for CPU/bucket
+            let user = this.getCached('user');
+            if (!user) {
+                user = await this.api.me();
+                this.setCache('user', user);
+            }
             
-            // Get memory which has dashboard telemetry (updated every 100 ticks)
-            const memory = await this.api.memory.get('', shard);
+            // Try to get memory which has dashboard telemetry (updated every 100 ticks in-game)
+            let memory = this.getCached('memory');
+            if (!memory) {
+                memory = await this.api.memory.get('', shard);
+                this.setCache('memory', memory);
+            }
             const dashboardData = memory.dashboard && memory.dashboard[roomName];
             
             // Use dashboard telemetry if available (most accurate, updated every 100 ticks)
@@ -121,35 +141,97 @@ class ScreepsClient {
                 }
             };
         } catch (error) {
-            console.error('[Screeps Client] Telemetry error:', error.message);
+            // Check if it's a rate limit error
+            if (error.message && error.message.includes('Rate limit')) {
+                const match = error.message.match(/retry after (\d+)ms/);
+                if (match) {
+                    this.markRateLimited(parseInt(match[1]));
+                    // Return cached data if available
+                    const cachedMemory = this.getCached('memory');
+                    const cachedUser = this.getCached('user');
+                    if (cachedMemory && cachedUser) {
+                        return this.buildTelemetryFromCache(roomName, cachedMemory, cachedUser);
+                    }
+                }
+            } else {
+                console.error('[Screeps Client] Telemetry error:', error.message);
+            }
             // Return default values on error so dashboard doesn't break
-            return {
-                timestamp: Date.now(),
-                room: roomName,
-                shard: shard,
-                cpu: 0,
-                cpuLimit: 20,
-                bucket: 10000,
-                energy: 0,
-                energyCapacity: 550,
-                rcl: 3,
-                rclProgress: 0,
-                rclProgressTotal: 135000,
-                creepCount: 0,
-                structures: { spawns: 1, extensions: 5, towers: 0 }
-            };
+            return this.getDefaultTelemetry(roomName, shard);
         }
     }
     
     /**
+     * Build telemetry from cached data
+     */
+    buildTelemetryFromCache(roomName, memory, user) {
+        const dashboardData = memory.dashboard && memory.dashboard[roomName];
+        
+        return {
+                timestamp: Date.now(),
+                room: roomName,
+                shard: shard,
+                cpu: user.cpu || 0,
+                cpuLimit: user.cpuAvailable || 20,
+                bucket: user.bucket || 10000,
+                energy: dashboardData ? dashboardData.energy : 0,
+                energyCapacity: dashboardData ? dashboardData.energyCapacity : 800,
+                rcl: dashboardData ? dashboardData.rcl : 3,
+                rclProgress: dashboardData ? dashboardData.rclProgress : 0,
+                rclProgressTotal: dashboardData ? dashboardData.rclProgressTotal : 135000,
+                creepCount: Object.keys(memory.creeps || {}).length,
+                structures: dashboardData ? dashboardData.structures : { spawns: 1, extensions: 10, towers: 1 },
+                cached: true,
+                cacheAge: Date.now() - this.cache.memory.timestamp
+        };
+    }
+    
+    /**
+     * Get default telemetry when no data available
+     */
+    getDefaultTelemetry(roomName, shard) {
+        return {
+            timestamp: Date.now(),
+            room: roomName,
+            shard: shard,
+            cpu: 0,
+            cpuLimit: 20,
+            bucket: 10000,
+            energy: 0,
+            energyCapacity: 800,
+            rcl: 3,
+            rclProgress: 0,
+            rclProgressTotal: 135000,
+            creepCount: 0,
+            structures: { spawns: 1, extensions: 10, towers: 1 },
+            cached: false,
+            offline: true
+        };
+    }
+    
+    /**
      * Get full colony status (like status() command)
+     * Uses intelligent caching to minimize API calls
      */
     async getStatus(roomName, shard) {
         if (!this.connected) throw new Error('Not connected to Screeps API');
         
+        // If rate limited, return cached data
+        if (this.isRateLimited()) {
+            const cachedMemory = this.getCached('memory');
+            if (cachedMemory) {
+                return this.buildStatusFromCache(roomName, cachedMemory);
+            }
+            return this.getDefaultStatus(roomName);
+        }
+        
         try {
-            // Get memory which contains all the info we need
-            const memory = await this.api.memory.get('', shard);
+            // Try cache first
+            let memory = this.getCached('memory');
+            if (!memory) {
+                memory = await this.api.memory.get('', shard);
+                this.setCache('memory', memory);
+            }
             const dashboardData = memory.dashboard && memory.dashboard[roomName];
             
             // Parse from memory
@@ -186,21 +268,72 @@ class ScreepsClient {
                 version: memory?.engine?.version || 'unknown'
             };
         } catch (error) {
-            console.error('[Screeps Client] Status error:', error.message);
-            // Return safe defaults
-            return {
-                timestamp: Date.now(),
-                room: roomName,
-                shard: shard,
-                rcl: 3,
-                rclProgress: 0,
-                rclProgressTotal: 135000,
-                mineral: null,
-                creeps: { total: 0, byRole: {} },
-                construction: { total: 0, byType: {} },
-                version: 'unknown'
-            };
+            // Check if it's a rate limit error
+            if (error.message && error.message.includes('Rate limit')) {
+                const match = error.message.match(/retry after (\d+)ms/);
+                if (match) {
+                    this.markRateLimited(parseInt(match[1]));
+                    const cachedMemory = this.getCached('memory');
+                    if (cachedMemory) {
+                        return this.buildStatusFromCache(roomName, cachedMemory);
+                    }
+                }
+            } else {
+                console.error('[Screeps Client] Status error:', error.message);
+            }
+            return this.getDefaultStatus(roomName);
         }
+    }
+    
+    /**
+     * Build status from cached memory
+     */
+    buildStatusFromCache(roomName, memory) {
+        const dashboardData = memory.dashboard && memory.dashboard[roomName];
+        const engineData = memory.engine || {};
+        
+        const creeps = memory.creeps || {};
+        const byRole = {};
+        Object.values(creeps).forEach(c => {
+            if (c.role) {
+                byRole[c.role] = (byRole[c.role] || 0) + 1;
+            }
+        });
+        
+        return {
+            timestamp: Date.now(),
+            room: roomName,
+            version: engineData.version || 'unknown',
+            creeps: {
+                total: Object.keys(creeps).length,
+                byRole: byRole
+            },
+            construction: dashboardData ? dashboardData.construction : { total: 0, byType: {} },
+            rcl: dashboardData ? dashboardData.rcl : 3,
+            rclProgress: dashboardData ? dashboardData.rclProgress : 0,
+            rclProgressTotal: dashboardData ? dashboardData.rclProgressTotal : 135000,
+            cached: true,
+            cacheAge: Date.now() - this.cache.memory.timestamp
+        };
+    }
+    
+    /**
+     * Get default status when no data available
+     */
+    getDefaultStatus(roomName) {
+        return {
+            timestamp: Date.now(),
+            room: roomName,
+            rcl: 3,
+            rclProgress: 0,
+            rclProgressTotal: 135000,
+            mineral: null,
+            creeps: { total: 0, byRole: {} },
+            construction: { total: 0, byType: {} },
+            version: 'unknown',
+            cached: false,
+            offline: true
+        };
     }
     
     /**
@@ -230,10 +363,14 @@ class ScreepsClient {
     }
     
     /**
-     * Execute console command
+     * Execute a console command
      */
     async executeCommand(command, shard) {
         if (!this.connected) throw new Error('Not connected to Screeps API');
+        
+        if (this.isRateLimited()) {
+            throw new Error('Rate limited. Console commands unavailable.');
+        }
         
         try {
             const result = await this.api.console(command, shard);
@@ -243,9 +380,35 @@ class ScreepsClient {
                 error: result.error || null
             };
         } catch (error) {
+            if (error.message && error.message.includes('Rate limit')) {
+                const match = error.message.match(/retry after (\d+)ms/);
+                if (match) {
+                    this.markRateLimited(parseInt(match[1]));
+                }
+            }
             console.error('[Screeps Client] Command error:', error.message);
             throw error;
         }
+    }
+    
+    /**
+     * Get cache status for monitoring
+     */
+    getCacheStatus() {
+        return {
+            rateLimited: this.cache.rateLimited,
+            rateLimitUntil: this.cache.rateLimitUntil,
+            rateLimitRemaining: this.cache.rateLimited ? 
+                Math.max(0, this.cache.rateLimitUntil - Date.now()) : 0,
+            memoryCache: {
+                valid: this.getCached('memory') !== null,
+                age: this.cache.memory.timestamp ? Date.now() - this.cache.memory.timestamp : null
+            },
+            userCache: {
+                valid: this.getCached('user') !== null,
+                age: this.cache.user.timestamp ? Date.now() - this.cache.user.timestamp : null
+            }
+        };
     }
 }
 

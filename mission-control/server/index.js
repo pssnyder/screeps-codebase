@@ -42,10 +42,12 @@ const DEFAULT_SHARD = process.env.DEFAULT_SHARD || 'shard3';
 
 // API Routes
 app.get('/api/health', (req, res) => {
+    const cacheStatus = screepsClient.getCacheStatus();
     res.json({
         status: 'operational',
         connected: screepsClient.isConnected(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        cache: cacheStatus
     });
 });
 
@@ -88,7 +90,7 @@ io.on('connection', (socket) => {
         defaultShard: DEFAULT_SHARD
     });
     
-    // Start telemetry stream
+    // Start telemetry stream - reduced frequency to avoid rate limiting
     const telemetryInterval = setInterval(async () => {
         try {
             const telemetry = await screepsClient.getTelemetry(DEFAULT_ROOM, DEFAULT_SHARD);
@@ -96,9 +98,9 @@ io.on('connection', (socket) => {
         } catch (error) {
             socket.emit('screeps:error', { message: error.message });
         }
-    }, parseInt(process.env.TELEMETRY_UPDATE_INTERVAL) || 2000);
+    }, parseInt(process.env.TELEMETRY_UPDATE_INTERVAL) || 10000); // Changed default from 2000 to 10000 (10 seconds)
     
-    // Status updates (less frequent)
+    // Status updates (less frequent) - reduced to avoid rate limiting
     const statusInterval = setInterval(async () => {
         try {
             const status = await screepsClient.getStatus(DEFAULT_ROOM, DEFAULT_SHARD);
@@ -106,7 +108,7 @@ io.on('connection', (socket) => {
         } catch (error) {
             socket.emit('screeps:error', { message: error.message });
         }
-    }, parseInt(process.env.STATUS_UPDATE_INTERVAL) || 5000);
+    }, parseInt(process.env.STATUS_UPDATE_INTERVAL) || 30000); // Changed default from 5000 to 30000 (30 seconds)
     
     // Handle console commands from client
     socket.on('screeps:command', async (data) => {
