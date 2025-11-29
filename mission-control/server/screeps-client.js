@@ -5,11 +5,23 @@
  * Provides methods for telemetry, status, and command execution
  */
 
-const ScreepsAPI = require('screeps-api');
+const { ScreepsAPI } = require('screeps-api');
 
 class ScreepsClient {
     constructor(credentials) {
-        this.api = new ScreepsAPI(credentials);
+        // Handle token-based or email/password authentication
+        const apiConfig = {};
+        
+        if (credentials.token) {
+            apiConfig.token = credentials.token;
+        } else if (credentials.email && credentials.password) {
+            apiConfig.email = credentials.email;
+            apiConfig.password = credentials.password;
+        } else {
+            throw new Error('No valid credentials provided. Need token or email/password');
+        }
+        
+        this.api = new ScreepsAPI(apiConfig);
         this.connected = false;
         this.memory = null;
         this.lastUpdate = null;
@@ -17,9 +29,19 @@ class ScreepsClient {
     
     async connect() {
         try {
-            await this.api.auth();
-            this.connected = true;
-            console.log('[Screeps Client] Authentication successful');
+            // For token-based auth, we don't need to call auth()
+            // The token is automatically used in API calls
+            if (this.api.token) {
+                // Test connection with a simple API call
+                await this.api.me();
+                this.connected = true;
+                console.log('[Screeps Client] Token authentication successful');
+            } else {
+                // For email/password, we need to auth first
+                await this.api.auth();
+                this.connected = true;
+                console.log('[Screeps Client] Email/password authentication successful');
+            }
         } catch (error) {
             console.error('[Screeps Client] Authentication failed:', error.message);
             throw error;
