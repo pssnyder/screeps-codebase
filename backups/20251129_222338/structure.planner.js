@@ -8,7 +8,7 @@
 class StructurePlanner {
     /**
      * Plan and place construction sites for a room
-     * v2.0.3: Reduced site limits to prevent overwhelming builders
+     * v2.0.1: Plan critical structures (extensions, towers) before roads
      */
     static run(room) {
         // Only plan once every 100 ticks
@@ -17,45 +17,35 @@ class StructurePlanner {
         const rcl = room.controller.level;
         const existingSites = room.find(FIND_MY_CONSTRUCTION_SITES);
         
-        // v2.0.3: Stop planning if we already have too many sites
-        if (existingSites.length >= 5) {
-            return; // Wait for builders to catch up
-        }
-        
-        const energyPercent = room.energyAvailable / room.energyCapacityAvailable;
-        
         // PRIORITY 1: Extensions (critical for energy capacity)
-        // But only if energy is reasonable
-        if (rcl >= 2 && existingSites.length < 5 && energyPercent > 0.25) {
+        if (rcl >= 2 && existingSites.length < 10) {
             this.planExtensions(room);
         }
         
         // PRIORITY 2: Towers (critical for defense at RCL 3+)
-        if (rcl >= 3 && existingSites.length < 5) {
+        if (rcl >= 3 && existingSites.length < 10) {
             this.planTower(room);
         }
         
         // PRIORITY 3: Containers (important for economy)
-        if (rcl >= 2 && existingSites.length < 5) {
+        if (rcl >= 2 && existingSites.length < 10) {
             this.planContainers(room);
         }
         
         // PRIORITY 4: Storage (game-changer at RCL 4+)
-        // Only plan storage if energy situation is stable
-        if (rcl >= 4 && existingSites.length < 3 && energyPercent > 0.5) {
+        if (rcl >= 4 && existingSites.length < 10) {
             this.planStorage(room);
         }
         
         // PRIORITY 5: Roads (nice to have, but not critical)
-        // Only plan roads if we have < 2 sites total and energy is stable
-        if (existingSites.length < 2 && energyPercent > 0.6) {
+        // Only plan roads if we have < 5 sites total
+        if (existingSites.length < 5) {
             this.planRoads(room);
         }
     }
     
     /**
      * Plan extensions near spawn
-     * v2.0.3: Place 3-4 at a time (not all at once)
      */
     static planExtensions(room) {
         const spawns = room.find(FIND_MY_SPAWNS);
@@ -77,9 +67,6 @@ class StructurePlanner {
         
         if (needed <= 0) return;
         
-        // v2.0.3: Only place 3-4 extensions per planning cycle
-        const toPlace = Math.min(needed, 4);
-        
         // Place extensions in a grid pattern near spawn
         const positions = [
             {dx: 2, dy: 0}, {dx: -2, dy: 0}, {dx: 0, dy: 2}, {dx: 0, dy: -2},
@@ -94,7 +81,7 @@ class StructurePlanner {
         
         let placed = 0;
         for (const pos of positions) {
-            if (placed >= toPlace) break;
+            if (placed >= needed) break;
             
             const x = spawn.pos.x + pos.dx;
             const y = spawn.pos.y + pos.dy;
