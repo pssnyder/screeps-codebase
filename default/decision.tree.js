@@ -99,82 +99,13 @@ class DecisionTree {
             const creepCounts = room ? this.countCreepsByRole(room) : {};
             const sourceCount = roomEval.resources && roomEval.resources.sources ? 
                 roomEval.resources.sources.length : 2;
-            const rcl = room ? room.controller.level : 1;
-            const energyPercent = room ? (room.energyAvailable / room.energyCapacityAvailable) : 0;
-            
-            // v2.0.3: Smart creep composition based on RCL and energy state
-            // At RCL 4+, we have containers - need more haulers, fewer harvesters
-            const hasContainers = room && room.find(FIND_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_CONTAINER
-            }).length > 0;
-            
-            // Harvester count: 1 per source (sits on container) at RCL 4+
-            // At lower RCL, 2 per source for flexibility
-            let targetHarvesters;
-            if (rcl >= 4 && hasContainers) {
-                targetHarvesters = sourceCount; // 1 per source (static harvesters)
-            } else if (rcl >= 3) {
-                targetHarvesters = sourceCount + 1; // 2-3 harvesters
-            } else {
-                targetHarvesters = sourceCount * 2; // 4 harvesters early game
-            }
-            
-            // Hauler count: scale with RCL and containers
-            let targetHaulers = 0;
-            if (hasContainers && rcl >= 3) {
-                targetHaulers = Math.max(2, sourceCount); // 2+ haulers with containers
-            } else if (rcl >= 2) {
-                targetHaulers = 1; // 1 hauler at RCL 2-3
-            }
-            
-            // Builder count: scale with construction sites and energy
-            const sites = room ? room.find(FIND_MY_CONSTRUCTION_SITES).length : 0;
-            let targetBuilders = 0;
-            if (sites > 0) {
-                if (energyPercent < 0.3) {
-                    targetBuilders = 1; // Low energy: only 1 builder
-                } else if (sites > 5 && rcl >= 4) {
-                    targetBuilders = 3; // Many sites: 3 builders
-                } else {
-                    targetBuilders = 2; // Normal: 2 builders
-                }
-            }
-            
-            // Upgrader count: scale with RCL
-            let targetUpgraders = 3;
-            if (rcl >= 5) {
-                targetUpgraders = 4; // More upgraders at higher RCL
-            } else if (energyPercent < 0.3 && rcl <= 3) {
-                targetUpgraders = 2; // Low energy early game: fewer upgraders
-            }
-            
-            // v3.0: Miner count for mineral harvesting (RCL 6+)
-            let targetMiners = 0;
-            if (rcl >= 6) {
-                // Check if we have extractor and terminal/storage
-                const extractor = room && room.find(FIND_MY_STRUCTURES, {
-                    filter: s => s.structureType === STRUCTURE_EXTRACTOR
-                }).length > 0;
-                
-                const hasStorage = room && (room.terminal || room.storage);
-                
-                // Check if mineral is available
-                const mineral = room && room.find(FIND_MINERALS)[0];
-                const mineralAvailable = mineral && mineral.mineralAmount > 0;
-                
-                // Only spawn miner if we have infrastructure and minerals
-                if (extractor && hasStorage && mineralAvailable) {
-                    targetMiners = 1; // One miner per room
-                }
-            }
             
             // Determine what to spawn based on needs
             const needs = {
-                harvester: Math.max(0, targetHarvesters - (creepCounts.harvester || 0)),
-                hauler: Math.max(0, targetHaulers - (creepCounts.hauler || 0)),
-                upgrader: Math.max(0, targetUpgraders - (creepCounts.upgrader || 0)),
-                builder: Math.max(0, targetBuilders - (creepCounts.builder || 0)),
-                miner: Math.max(0, targetMiners - (creepCounts.miner || 0))
+                harvester: Math.max(0, sourceCount * 2 - (creepCounts.harvester || 0)),
+                upgrader: Math.max(0, 3 - (creepCounts.upgrader || 0)),
+                builder: Math.max(0, 2 - (creepCounts.builder || 0)),
+                hauler: Math.max(0, 1 - (creepCounts.hauler || 0))
             };
             
             // EMERGENCY: If we have less than 1 harvester, CRITICAL PRIORITY
@@ -182,15 +113,22 @@ class DecisionTree {
                 needs.harvester = 2; // Emergency spawn
             }
             
-            // Note: Builder scaling now handled above in needs calculation
+            // Smart builder scaling - v2.0 enhancement
+            if (room) {
+                const sites = room.find(FIND_MY_CONSTRUCTION_SITES);
+                const rcl = room.controller.level;
+                
+                if (sites.length === 0 && (creepCounts.builder || 0) >= 1) {
+                    needs.builder = 0; // Don't need builders if nothing to build
+                } else if (sites.length > 5 && rcl >= 3) {
+                    // At RCL 3+, spawn extra builder if lots of construction
+                    needs.builder = Math.max(0, 3 - (creepCounts.builder || 0));
+                }
+            }
             
             // Debug logging
             if (Game.time % 100 === 0) {
-                const totalCreeps = Object.values(creepCounts).reduce((sum, n) => sum + n, 0);
-                console.log(`[Strategy] ${roomName} (RCL ${rcl}): ${totalCreeps} creeps - needs H:${needs.harvester} Hauler:${needs.hauler} U:${needs.upgrader} B:${needs.builder}`);
-                if (energyPercent < 0.3) {
-                    console.log(`  ⚠️ Low energy (${(energyPercent*100).toFixed(0)}%) - reduced builder/upgrader spawns`);
-                }
+                console.log(`[Strategy] ${roomName} needs: H:${needs.harvester} U:${needs.upgrader} B:${needs.builder}`);
             }
             
             // Defense needs - v2.0 smart defense (capped)
@@ -263,17 +201,14 @@ class DecisionTree {
     
     /**
      * Determine spawn priority for a role
-     * v2.0.3: Boost hauler priority at RCL 4+ (containers need haulers)
-     * v3.0: Add miner priority (medium-low, after economy stabilizes)
      */
     static getSpawnPriority(role, needs) {
         const priorities = {
             harvester: 10,  // Highest - economy is critical
             defender: 9,    // Defense is crucial
-            miner: 4,       // v3.0: Medium-low priority (after economy stable)
-            hauler: 8,      // v2.0.3: Increased from 7 (critical at RCL 4+)
-            upgrader: 6,    // Important but not urgent
-            builder: 5      // Lowest - can wait if needed
+            hauler: 7,
+            upgrader: 5,
+            builder: 4
         };
         
         // Boost priority if critical shortage
@@ -293,7 +228,6 @@ class DecisionTree {
     /**
      * Generate optimal body configuration for a role
      * Like choosing piece types in chess based on position
-     * v3.0: Added miner body generation
      */
     static generateOptimalBody(role, room) {
         const energyAvailable = room.energyCapacityAvailable;
@@ -304,8 +238,7 @@ class DecisionTree {
             upgrader: () => this.buildBody(energyAvailable, [WORK, CARRY, MOVE]),
             builder: () => this.buildBody(energyAvailable, [WORK, CARRY, MOVE, MOVE]),
             hauler: () => this.buildBody(energyAvailable, [CARRY, CARRY, MOVE]),
-            defender: () => this.buildBody(energyAvailable, [TOUGH, ATTACK, MOVE]),
-            miner: () => this.buildBody(energyAvailable, [WORK, WORK, CARRY, MOVE]) // v3.0: Miner pattern
+            defender: () => this.buildBody(energyAvailable, [TOUGH, ATTACK, MOVE])
         };
         
         return templates[role] ? templates[role]() : [WORK, CARRY, MOVE];

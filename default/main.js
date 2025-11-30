@@ -11,18 +11,16 @@ const MemoryManager = require('./memory.manager');
 const Analytics = require('./analytics');
 const SpawnHelper = require('./spawn.helper');
 const ConsoleHelper = require('./console.helper');
-const MarketManager = require('./market.manager');
 
 // Expose helpers to global scope for console commands
 global.SpawnHelper = SpawnHelper;
 global.Analytics = Analytics;
 global.Engine = Engine;
-global.MarketManager = MarketManager;
 
 // Initialize memory structure on first run
 if (!Memory.engine) {
     Memory.engine = {
-        version: '3.0.0',
+        version: '2.0.2',
         initialized: Game.time,
         stats: {},
         decisions: [],
@@ -34,8 +32,7 @@ if (!Memory.engine) {
     console.log(`🧠 SCREEPS ENGINE v${Memory.engine.version} - INITIALIZED`);
     console.log('═══════════════════════════════════════════');
     console.log('Chess-engine inspired AI system');
-    console.log('v3.0.0: Minerals & Markets - miner role, automated trading');
-    console.log('+ Technical debt fixes based on TIPS optimization guide');
+    console.log('OPTIMIZED: Tower CPU caching, throttled operations');
     console.log('Type help() for available commands');
     console.log('═══════════════════════════════════════════');
 }
@@ -95,16 +92,6 @@ module.exports.loop = function() {
     } catch (error) {
         console.log(`[ERROR] Engine execution failed: ${error.message}`);
         console.log(error.stack);
-    }
-    
-    // v3.0: Market operations for automated trading
-    try {
-        checkpoint = Game.cpu.getUsed();
-        const marketManager = new MarketManager();
-        marketManager.run();
-        profiling.market = Game.cpu.getUsed() - checkpoint;
-    } catch (error) {
-        console.log(`[ERROR] Market manager failed: ${error.message}`);
     }
     
     // Store profiling data for profile() command

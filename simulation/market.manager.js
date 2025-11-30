@@ -296,9 +296,10 @@ class MarketManager {
         if (recentIncoming.length > 0) {
             let revenue = 0;
             for (const tx of recentIncoming) {
-                revenue += (tx.order?.price || 0) * tx.amount;
+                const price = (tx.order && tx.order.price) ? tx.order.price : 0;
+                revenue += price * tx.amount;
                 
-                console.log(`[Market] SALE: ${tx.amount} ${tx.resourceType} @ ${tx.order?.price || 0} = ${revenue.toFixed(2)} credits`);
+                console.log(`[Market] SALE: ${tx.amount} ${tx.resourceType} @ ${price} = ${revenue.toFixed(2)} credits`);
             }
             
             if (revenue > 0) {
@@ -314,9 +315,10 @@ class MarketManager {
         if (recentOutgoing.length > 0) {
             let cost = 0;
             for (const tx of recentOutgoing) {
-                cost += (tx.order?.price || 0) * tx.amount;
+                const price = (tx.order && tx.order.price) ? tx.order.price : 0;
+                cost += price * tx.amount;
                 
-                console.log(`[Market] PURCHASE: ${tx.amount} ${tx.resourceType} @ ${tx.order?.price || 0} = ${cost.toFixed(2)} credits`);
+                console.log(`[Market] PURCHASE: ${tx.amount} ${tx.resourceType} @ ${price} = ${cost.toFixed(2)} credits`);
             }
             
             if (cost > 0) {
@@ -369,7 +371,8 @@ class MarketManager {
         if (recentTx.length > 0) {
             console.log(`Recent Sales: ${recentTx.length}`);
             for (const tx of recentTx) {
-                console.log(`  ${tx.amount} ${tx.resourceType} @ ${tx.order?.price || 0}`);
+                const price = (tx.order && tx.order.price) ? tx.order.price : 0;
+                console.log(`  ${tx.amount} ${tx.resourceType} @ ${price}`);
             }
         }
         
