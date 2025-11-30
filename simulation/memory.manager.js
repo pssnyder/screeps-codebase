@@ -6,12 +6,13 @@
 
 class MemoryManager {
     /**
-     * Clean up memory of dead creeps - v2.0 optimized
-     * Only run cleanup when needed (not every tick)
+     * Clean up memory of dead creeps - v3.0 enhanced
+     * TIPS: "The creep memory is saved upon death, so clear Memory.creeps.* to prevent overflowing."
+     * TIPS: "The more small objects in the Memory, the more CPU spent on its parsing."
      */
     static cleanDeadCreeps() {
-        // Only clean every 10 ticks (dead creeps don't respawn instantly)
-        if (Game.time % 10 !== 0) return;
+        // Clean every tick for immediate memory reclamation
+        // v3.0: Changed from every 10 ticks to every tick based on TIPS
         
         // Fast cleanup: only iterate Memory.creeps once
         for (const name in Memory.creeps) {

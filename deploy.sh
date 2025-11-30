@@ -76,6 +76,132 @@ sync_to_simulation() {
     echo ""
 }
 
+# Function to extract version from main.js
+get_version() {
+    local dir=$1
+    local main_file="$dir/main.js"
+    
+    if [ ! -f "$main_file" ]; then
+        echo "unknown"
+        return
+    fi
+    
+    # Try to extract version from Memory.engine.version or similar
+    version=$(grep -oP "version:\s*['\"]([^'\"]+)" "$main_file" | head -1 | sed "s/.*version:\s*['\"]//;s/['\"].*//" || echo "unknown")
+    echo "$version"
+}
+
+# Function to get file metadata
+get_file_metadata() {
+    local dir=$1
+    local file_count=$(ls -1 "$dir"/*.js 2>/dev/null | wc -l)
+    local total_size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+    local last_modified=""
+    
+    if command -v stat &> /dev/null; then
+        # Linux/Mac compatible
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            last_modified=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$dir"/*.js 2>/dev/null | sort -r | head -1)
+        else
+            last_modified=$(stat -c "%y" "$dir"/*.js 2>/dev/null | sort -r | head -1 | cut -d'.' -f1)
+        fi
+    fi
+    
+    echo "$file_count|$total_size|$last_modified"
+}
+
+# Function to show status
+show_status() {
+    echo ""
+    echo "═══════════════════════════════════════════════"
+    echo "📊 SCREEPS DEPLOYMENT STATUS"
+    echo "═══════════════════════════════════════════════"
+    echo ""
+    
+    # Get versions
+    prod_version=$(get_version "$DEFAULT_DIR")
+    sim_version=$(get_version "$SIM_DIR")
+    
+    # Get metadata
+    IFS='|' read -r prod_files prod_size prod_modified <<< "$(get_file_metadata "$DEFAULT_DIR")"
+    IFS='|' read -r sim_files sim_size sim_modified <<< "$(get_file_metadata "$SIM_DIR")"
+    
+    # Production info
+    echo "🔴 PRODUCTION (default/)"
+    echo "   Version:       $prod_version"
+    echo "   Files:         $prod_files .js files"
+    echo "   Size:          $prod_size"
+    if [ -n "$prod_modified" ]; then
+        echo "   Last Modified: $prod_modified"
+    fi
+    echo ""
+    
+    # Simulation info
+    echo "🟡 SIMULATION (simulation/)"
+    echo "   Version:       $sim_version"
+    echo "   Files:         $sim_files .js files"
+    echo "   Size:          $sim_size"
+    if [ -n "$sim_modified" ]; then
+        echo "   Last Modified: $sim_modified"
+    fi
+    echo ""
+    
+    # Sync status
+    echo "🔄 SYNC STATUS"
+    
+    if [ "$prod_version" != "$sim_version" ]; then
+        print_warning "Version mismatch: Production ($prod_version) vs Simulation ($sim_version)"
+    else
+        print_success "Versions match: $prod_version"
+    fi
+    
+    # Check file differences
+    changed_files=0
+    new_files=0
+    
+    for file in "$SIM_DIR"/*.js; do
+        filename=$(basename "$file")
+        default_file="$DEFAULT_DIR/$filename"
+        
+        if [ ! -f "$default_file" ]; then
+            ((new_files++))
+            continue
+        fi
+        
+        if ! diff -q "$file" "$default_file" > /dev/null 2>&1; then
+            ((changed_files++))
+        fi
+    done
+    
+    if [ $changed_files -eq 0 ] && [ $new_files -eq 0 ]; then
+        print_success "Simulation is synced with production"
+    else
+        if [ $changed_files -gt 0 ]; then
+            print_warning "$changed_files file(s) modified in simulation"
+        fi
+        if [ $new_files -gt 0 ]; then
+            print_info "$new_files new file(s) in simulation"
+        fi
+        print_info "Run './deploy.sh diff' to see details"
+    fi
+    
+    echo ""
+    
+    # Last backup info
+    if [ -d "$BACKUP_DIR" ] && [ -n "$(ls -A $BACKUP_DIR 2>/dev/null)" ]; then
+        latest_backup=$(ls -t "$BACKUP_DIR" | head -1)
+        backup_date="${latest_backup:0:8}"
+        backup_time="${latest_backup:9:6}"
+        formatted_date="${backup_date:0:4}-${backup_date:4:2}-${backup_date:6:2}"
+        formatted_time="${backup_time:0:2}:${backup_time:2:2}:${backup_time:4:2}"
+        
+        echo "💾 LAST BACKUP"
+        echo "   $latest_backup"
+        echo "   $formatted_date $formatted_time"
+        echo ""
+    fi
+}
+
 # Function to show diff between simulation and production
 show_diff() {
     echo ""
@@ -195,6 +321,9 @@ case "${1:-help}" in
     sync)
         sync_to_simulation
         ;;
+    status)
+        show_status
+        ;;
     diff)
         show_diff
         ;;
@@ -215,6 +344,7 @@ case "${1:-help}" in
         echo "COMMANDS:"
         echo "  deploy      Deploy simulation → production (GOES LIVE)"
         echo "  sync        Sync production → simulation (for testing)"
+        echo "  status      Show version and sync status (dev vs prod)"
         echo "  diff        Show differences between sim and prod"
         echo "  backups     List all available backups"
         echo "  restore     Restore from backup (emergency rollback)"
@@ -223,8 +353,9 @@ case "${1:-help}" in
         echo "WORKFLOW:"
         echo "  1. Make changes in simulation folder"
         echo "  2. Test in Screeps sim room"
-        echo "  3. ./deploy.sh diff      (review changes)"
-        echo "  4. ./deploy.sh deploy    (push to production)"
+        echo "  3. ./deploy.sh status    (check sync status)"
+        echo "  4. ./deploy.sh diff      (review changes)"
+        echo "  5. ./deploy.sh deploy    (push to production)"
         echo ""
         echo "SAFETY:"
         echo "  • Auto-backups before each deployment"

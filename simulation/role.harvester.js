@@ -2,6 +2,7 @@
  * HARVESTER ROLE
  * 
  * Intelligent energy harvesting with optimal source selection
+ * v2.0.3: Static harvester mode at RCL 4+ (sits on container)
  */
 
 class RoleHarvester {
@@ -17,6 +18,45 @@ class RoleHarvester {
             };
         }
         
+        // v2.0.3: Check if we should be a static harvester (RCL 4+)
+        const room = creep.room;
+        const rcl = room.controller.level;
+        
+        if (rcl >= 4 && !creep.memory.staticHarvester) {
+            // Try to find a container near a source to claim
+            const containers = room.find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_CONTAINER
+            });
+            
+            for (const container of containers) {
+                const nearbySource = container.pos.findInRange(FIND_SOURCES, 1);
+                if (nearbySource.length > 0) {
+                    // Check if another harvester already claimed this container
+                    const otherHarvester = _.find(Game.creeps, c => 
+                        c.memory.role === 'harvester' &&
+                        c.memory.containerId === container.id &&
+                        c.id !== creep.id
+                    );
+                    
+                    if (!otherHarvester) {
+                        // Claim this container and source
+                        creep.memory.staticHarvester = true;
+                        creep.memory.containerId = container.id;
+                        creep.memory.sourceId = nearbySource[0].id;
+                        console.log(`[Harvester] ${creep.name} assigned to static position at container ${container.id}`);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Static harvester mode: stay at container and harvest continuously
+        if (creep.memory.staticHarvester) {
+            this.staticHarvest(creep);
+            return;
+        }
+        
+        // Mobile harvester mode (RCL < 4 or no containers)
         // State machine: harvesting -> delivering
         if (creep.store.getFreeCapacity() === 0) {
             creep.memory.working = true;
@@ -35,7 +75,47 @@ class RoleHarvester {
     }
     
     /**
-     * Harvest energy from source
+     * Static harvester: sit on container and harvest continuously
+     * Energy drops into container, haulers will move it
+     */
+    static staticHarvest(creep) {
+        const container = Game.getObjectById(creep.memory.containerId);
+        const source = Game.getObjectById(creep.memory.sourceId);
+        
+        // If container destroyed, switch back to mobile mode
+        if (!container || !source) {
+            console.log(`[Harvester] ${creep.name} lost container/source, switching to mobile mode`);
+            delete creep.memory.staticHarvester;
+            delete creep.memory.containerId;
+            delete creep.memory.sourceId;
+            return;
+        }
+        
+        // Move to container if not on it
+        if (!creep.pos.isEqualTo(container.pos)) {
+            creep.moveTo(container, {
+                visualizePathStyle: { stroke: '#ffaa00' },
+                reusePath: 20
+            });
+            return;
+        }
+        
+        // Harvest continuously
+        const result = creep.harvest(source);
+        if (result === OK) {
+            const workParts = creep.body.filter(p => p.type === WORK).length;
+            creep.memory.stats.energyHarvested += workParts * 2;
+        }
+        
+        // If container is getting full and we're full, drop energy on ground
+        if (creep.store.getFreeCapacity() === 0 && 
+            container.store.getFreeCapacity(RESOURCE_ENERGY) < 100) {
+            creep.drop(RESOURCE_ENERGY);
+        }
+    }
+    
+    /**
+     * Harvest energy from source (mobile mode)
      */
     static harvest(creep) {
         // Find or remember source
@@ -57,7 +137,7 @@ class RoleHarvester {
             // Count creeps at each source
             const sourceCrowding = sources.map(s => {
                 const nearbyCreeps = s.pos.findInRange(FIND_MY_CREEPS, 1, {
-                    filter: c => c.memory.sourceId === s.id
+                    filter: c => c.memory.sourceId === s.id || !c.memory.sourceId
                 });
                 return { source: s, count: nearbyCreeps.length };
             });
@@ -84,7 +164,7 @@ class RoleHarvester {
     }
     
     /**
-     * Deliver energy to spawn/extensions
+     * Deliver energy to spawn/extensions (mobile mode)
      */
     static deliver(creep) {
         // Intelligent target selection
