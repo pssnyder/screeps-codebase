@@ -1,0 +1,32 @@
+═══════════════════════════════════════════
+PRODUCTION DEPLOYMENT - Sat, Dec  6, 2025 11:07:28 AM
+═══════════════════════════════════════════
+
+✅ Deployed: simulation/ → default/
+
+NEW FILES (v3.2.0 - Expansion System):
+  • role.scout.js         - Room exploration
+  • role.claimer.js       - Controller claiming
+  • role.pioneer.js       - Remote colonization
+  • expansion.manager.js  - Expansion coordination
+  • expansion.scout.js    - Room analysis tool
+  • EXPANSION_GUIDE.md    - Usage documentation
+
+UPDATED FILES:
+  • engine.core.js        - Integrated ExpansionManager
+  • role.manager.js       - Added scout/claimer/pioneer roles
+  • console.helper.js     - Added expansion commands
+
+CONSOLE COMMANDS AVAILABLE:
+  scout('W12N57', ...)     - Spawn scout to explore
+  expand()                 - Show expansion status
+  queueExpansion('W12N57') - Queue room for expansion
+  enableExpansion()        - Enable expansion system
+  disableExpansion()       - Disable expansion system
+
+SYSTEM STATUS:
+  ⚠️  Expansion system: DISABLED by default
+  ��� Ready to scout and queue targets
+  ��� Awaiting GCL 2 (currently 82% progress)
+  
+═══════════════════════════════════════════

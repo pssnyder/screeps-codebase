@@ -14,8 +14,6 @@ const RoleManager = require('./role.manager');
 const SpawnController = require('./spawn.controller');
 const TowerController = require('./tower.controller');
 const StructurePlanner = require('./structure.planner');
-const LinkManager = require('./link.manager');
-const ExpansionManager = require('./expansion.manager');
 
 class EngineCore {
     /**
@@ -41,11 +39,6 @@ class EngineCore {
             // Auto-plan structures (v1.1)
             StructurePlanner.run(room);
             
-            // Manage link transfers (v3.1, throttled)
-            if (Game.time % 3 === 0) { // Every 3 ticks
-                LinkManager.run(room);
-            }
-            
             // Make spawn decisions
             SpawnController.run(room, roomEval, strategy);
             
@@ -58,9 +51,6 @@ class EngineCore {
             const creep = Game.creeps[name];
             RoleManager.executeCreep(creep, strategy);
         }
-        
-        // Phase 5: Expansion Management (every tick)
-        ExpansionManager.run();
         
         // Store evaluation for learning
         Memory.engine.lastEvaluation = gameState;

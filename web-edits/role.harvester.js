@@ -100,20 +100,6 @@ class RoleHarvester {
             return;
         }
         
-        // v3.1: Check for adjacent link first (RCL 5+)
-        const nearbyLink = creep.pos.findInRange(FIND_MY_STRUCTURES, 1, {
-            filter: s => s.structureType === STRUCTURE_LINK && 
-                        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-        });
-        
-        // If we have energy and there's a link, transfer to it
-        if (nearbyLink.length > 0 && creep.store[RESOURCE_ENERGY] > 0) {
-            const link = nearbyLink[0];
-            if (creep.transfer(link, RESOURCE_ENERGY) === OK) {
-                creep.memory.stats.energyDelivered += creep.store[RESOURCE_ENERGY];
-            }
-        }
-        
         // Harvest continuously
         const result = creep.harvest(source);
         if (result === OK) {

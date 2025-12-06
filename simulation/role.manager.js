@@ -11,6 +11,9 @@ const RoleBuilder = require('./role.builder');
 const RoleHauler = require('./role.hauler');
 const RoleDefender = require('./role.defender');
 const RoleMiner = require('./role.miner');
+const RoleScout = require('./role.scout');
+const RoleClaimer = require('./role.claimer');
+const RolePioneer = require('./role.pioneer');
 
 class RoleManager {
     /**
@@ -45,6 +48,15 @@ class RoleManager {
                     break;
                 case 'miner':
                     RoleMiner.run(creep, strategy);
+                    break;
+                case 'scout':
+                    RoleScout.run(creep);
+                    break;
+                case 'claimer':
+                    RoleClaimer.run(creep);
+                    break;
+                case 'pioneer':
+                    RolePioneer.run(creep);
                     break;
                 default:
                     console.log(`[Warning] Unknown role: ${role} for ${creep.name}`);

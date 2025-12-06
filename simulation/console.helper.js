@@ -26,6 +26,13 @@ class ConsoleHelper {
         console.log('  SpawnHelper.u()      - Spawn upgrader');
         console.log('  SpawnHelper.b()      - Spawn builder');
         console.log('  SpawnHelper.auto()   - Auto-spawn');
+        console.log('  scout("W12N57",...)  - Spawn scout to explore rooms');
+        console.log('');
+        console.log('🌍 EXPANSION:');
+        console.log('  expand()             - Show expansion status');
+        console.log('  queueExpansion()     - Queue room for expansion');
+        console.log('  enableExpansion()    - Enable expansion system');
+        console.log('  disableExpansion()   - Disable expansion system');
         console.log('');
         console.log('🧪 TESTING:');
         console.log('  testEngine.quick()   - Run quick tests');
@@ -469,6 +476,156 @@ class ConsoleHelper {
         
         console.log(`💀 Killed ${killed} ${role}(s)`);
     }
+    
+    /**
+     * Spawn a scout creep to explore rooms
+     * Usage: scout('W12N57', 'W13N56', 'W12N56')
+     */
+    static scout(...roomNames) {
+        if (roomNames.length === 0) {
+            console.log('❌ Usage: scout("W12N57", "W13N56", ...)');
+            console.log('   Spawns a scout to explore specified rooms');
+            return;
+        }
+        
+        const spawn = Object.values(Game.spawns).find(s => !s.spawning);
+        if (!spawn) {
+            console.log('❌ No available spawns');
+            return;
+        }
+        
+        const body = [MOVE]; // Cheap and fast
+        const name = `scout_${Game.time}`;
+        const memory = {
+            role: 'scout',
+            targets: roomNames
+        };
+        
+        const result = spawn.spawnCreep(body, name, { memory: memory });
+        
+        if (result === OK) {
+            console.log(`✅ Spawning scout: ${name}`);
+            console.log(`   Targets: ${roomNames.join(', ')}`);
+        } else {
+            console.log(`❌ Failed to spawn scout: ${result}`);
+        }
+    }
+    
+    /**
+     * Show expansion status
+     */
+    static expand() {
+        if (!Memory.expansion) {
+            console.log('❌ Expansion system not initialized');
+            return;
+        }
+        
+        console.log('═══════════════════════════════════════════');
+        console.log('🌍 EXPANSION STATUS');
+        console.log('═══════════════════════════════════════════');
+        console.log(`Status: ${Memory.expansion.enabled ? '✅ ENABLED' : '❌ DISABLED'}`);
+        console.log(`GCL: ${Game.gcl.level} (${Game.gcl.progress}/${Game.gcl.progressTotal})`);
+        
+        const ownedRoomCount = Object.keys(Game.rooms).filter(r => 
+            Game.rooms[r].controller && Game.rooms[r].controller.my
+        ).length;
+        console.log(`Rooms: ${ownedRoomCount}/${Game.gcl.level}`);
+        
+        console.log('\n📋 QUEUED TARGETS:');
+        if (Memory.expansion.targets && Memory.expansion.targets.length > 0) {
+            Memory.expansion.targets.forEach((t, i) => {
+                console.log(`  ${i + 1}. ${t.room} (${t.pioneerCount || 3} pioneers)`);
+            });
+        } else {
+            console.log('  None');
+        }
+        
+        console.log('\n🚀 ACTIVE OPERATIONS:');
+        if (Memory.expansion.activeOperations && Memory.expansion.activeOperations.length > 0) {
+            Memory.expansion.activeOperations.forEach(op => {
+                console.log(`  ${op.targetRoom}:`);
+                console.log(`    Claimed: ${op.claimed ? '✅' : '⏳'}`);
+                console.log(`    Spawn: ${op.spawnBuilt ? '✅' : '⏳'}`);
+                console.log(`    Pioneers: ${op.pioneersAlive}`);
+            });
+        } else {
+            console.log('  None');
+        }
+        
+        console.log('\n🏠 OWNED ROOMS:');
+        if (Memory.expansion.ownedRooms) {
+            for (const roomName in Memory.expansion.ownedRooms) {
+                const info = Memory.expansion.ownedRooms[roomName];
+                const room = Game.rooms[roomName];
+                const rcl = room && room.controller ? room.controller.level : '?';
+                console.log(`  ${roomName} - RCL ${rcl} - ${info.status}`);
+            }
+        }
+        
+        console.log('═══════════════════════════════════════════');
+    }
+    
+    /**
+     * Queue a room for expansion
+     * Usage: queueExpansion('W12N57', { pioneerCount: 3, minEnergy: 50000, signText: 'Hello!' })
+     */
+    static queueExpansion(roomName, options = {}) {
+        if (!Memory.expansion) {
+            Memory.expansion = {
+                enabled: false,
+                targets: [],
+                ownedRooms: {},
+                activeOperations: []
+            };
+        }
+        
+        // Check if already queued
+        const existing = Memory.expansion.targets.find(t => t.room === roomName);
+        if (existing) {
+            console.log(`⚠️ ${roomName} already queued`);
+            return;
+        }
+        
+        const target = {
+            room: roomName,
+            pioneerCount: options.pioneerCount || 3,
+            minEnergy: options.minEnergy || 50000,
+            signText: options.signText || `Claimed by AI - ${new Date().toISOString().split('T')[0]}`
+        };
+        
+        Memory.expansion.targets.push(target);
+        console.log(`✅ Queued ${roomName} for expansion`);
+        console.log(`   Pioneers: ${target.pioneerCount}`);
+        console.log(`   Min Energy: ${target.minEnergy}`);
+    }
+    
+    /**
+     * Enable expansion system
+     */
+    static enableExpansion() {
+        if (!Memory.expansion) {
+            Memory.expansion = {
+                enabled: true,
+                targets: [],
+                ownedRooms: {},
+                activeOperations: []
+            };
+        } else {
+            Memory.expansion.enabled = true;
+        }
+        console.log('✅ Expansion system ENABLED');
+        console.log('   Queue targets with: queueExpansion("W12N57")');
+    }
+    
+    /**
+     * Disable expansion system
+     */
+    static disableExpansion() {
+        if (Memory.expansion) {
+            Memory.expansion.enabled = false;
+        }
+        console.log('❌ Expansion system DISABLED');
+    }
 }
 
 // Expose to global scope
@@ -482,5 +639,10 @@ global.planStructures = () => ConsoleHelper.planStructures();
 global.killAll = (role) => ConsoleHelper.killAll(role);
 global.clear = () => ConsoleHelper.clear();
 global.kill = (name) => ConsoleHelper.kill(name);
+global.scout = (...rooms) => ConsoleHelper.scout(...rooms);
+global.expand = () => ConsoleHelper.expand();
+global.queueExpansion = (room, opts) => ConsoleHelper.queueExpansion(room, opts);
+global.enableExpansion = () => ConsoleHelper.enableExpansion();
+global.disableExpansion = () => ConsoleHelper.disableExpansion();
 
 module.exports = ConsoleHelper;

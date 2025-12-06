@@ -120,15 +120,8 @@ class DecisionTree {
             }
             
             // Hauler count: scale with RCL and containers
-            // v3.1: Increased haulers at RCL 5 until links are operational
             let targetHaulers = 0;
-            if (hasContainers && rcl >= 5) {
-                // RCL 5: 3 haulers to handle 30 extensions before links kick in
-                const hasLinks = room && room.find(FIND_MY_STRUCTURES, {
-                    filter: s => s.structureType === STRUCTURE_LINK
-                }).length >= 2;
-                targetHaulers = hasLinks ? 1 : 3; // 3 until links operational, then 1
-            } else if (hasContainers && rcl >= 3) {
+            if (hasContainers && rcl >= 3) {
                 targetHaulers = Math.max(2, sourceCount); // 2+ haulers with containers
             } else if (rcl >= 2) {
                 targetHaulers = 1; // 1 hauler at RCL 2-3
